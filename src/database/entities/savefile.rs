@@ -3,25 +3,26 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "sessions")]
+#[sea_orm(table_name = "savefile")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
-    pub account_id: Uuid,
-    pub created_at: DateTimeWithTimeZone,
-    pub expires_at: DateTimeWithTimeZone,
-    pub is_revoked: bool,
-    pub token: String,
+    pub games_played: i64,
+    pub points: i64,
+    pub cards_had: i64,
+    pub wins: i64,
+    pub loses: i64,
+    pub max_points: i64,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(
         belongs_to = "super::accounts::Entity",
-        from = "Column::AccountId",
+        from = "Column::Id",
         to = "super::accounts::Column::Id",
-        on_update = "Restrict",
-        on_delete = "Restrict"
+        on_update = "Cascade",
+        on_delete = "Cascade"
     )]
     Accounts,
 }
