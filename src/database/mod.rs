@@ -1,3 +1,2 @@
-pub mod entities;
-pub mod queries;
 pub mod repository;
+pub mod postgres;

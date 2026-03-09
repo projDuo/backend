@@ -1,7 +1,9 @@
 mod database;
 mod gateway;
 mod http;
-mod game;
+mod domain;
+mod payloads;
+mod service;
 mod runtime_storage;
 
 use poem::{
@@ -12,6 +14,9 @@ use shuttle_runtime::SecretStore;
 use std::{collections::HashSet, sync::Arc};
 use tokio::sync::RwLock;
 use http::*;
+use domain::game;
+use database::postgres::repository as pg_repo;
+
 
 pub type Players = HashSet::<gateway::sessions::User>;
 pub type Rooms = runtime_storage::DataTable::<game::rooms::Room>;
@@ -63,7 +68,8 @@ async fn poem(#[shuttle_runtime::Secrets] secret_store: SecretStore) -> ShuttleP
             .at("/api/rooms/:id/game/play", post(http::rooms::game::play))
             .at("/api/rooms/:id/game/play/:card_id", post(http::rooms::game::play))
             .with(Cors::new().allow_origin_regex("*")) //Налаштування CORS політики
-            .with(AddData::new(Arc::new(db))) //Передача посилання на з'єднання БД в аргументи функцій
+            .with(AddData::new(Arc::new(db.clone()))) //Передача посилання на з'єднання БД в аргументи функцій
+            .with(AddData::new(Arc::new(service::Accounts::new(pg_repo::Accounts::new(db.clone())))))
             .with(AddData::new(Arc::new(RwLock::new(Players::new())))) //Передача посилання на список авторизованих по gateway гравців
             .with(AddData::new(Arc::new(RwLock::new(Rooms::new())))); //Передача посилання на список кімнат
             Ok(app.into()) //Завершення налаштування та передача Route в Shuttle Runtime.
