@@ -2,12 +2,11 @@ mod database;
 mod gateway;
 mod http;
 mod domain;
-mod payloads;
 mod service;
 mod runtime_storage;
 
 use poem::{
-    get, handler, head, middleware::{ AddData, Cors }, patch, post, EndpointExt, Route
+    middleware::{ AddData, Cors }, EndpointExt
 };
 use shuttle_poem::ShuttlePoem;
 use shuttle_runtime::SecretStore;
@@ -15,16 +14,14 @@ use std::{collections::HashSet, sync::Arc};
 use tokio::sync::RwLock;
 use http::*;
 use domain::game;
-use database::postgres::repository as pg_repo;
+use database::postgres as pg_repo;
 
 
 pub type Players = HashSet::<gateway::sessions::User>;
 pub type Rooms = runtime_storage::DataTable::<game::rooms::Room>;
 
-#[handler]
-fn hello_world() -> &'static str {
-    "Hello, world!"
-}
+pub type AccountsService = service::Accounts<pg_repo::Accounts>;
+pub type SavefilesService = service::Service<domain::savefiles::Savefile, pg_repo::Savefiles>;
 
 #[shuttle_runtime::main]
 async fn poem(#[shuttle_runtime::Secrets] secret_store: SecretStore) -> ShuttlePoem<impl poem::Endpoint> {
@@ -50,26 +47,17 @@ async fn poem(#[shuttle_runtime::Secrets] secret_store: SecretStore) -> ShuttleP
 
     match db {
         Ok(db) => { //Якщо змінна db містить з'єднання
-            let app = Route::new() //Тоді створити новий екземпляр Route
-            .at("/api/hello_world", get(hello_world)) //Задавання шляхів, методів та відповідних функцій
-            .at("/api/gateway", get(gateway::gateway))
-            .at("/api/auth/register", head(auth::exists).post(auth::register))
-            .at("/api/auth/login", post(auth::login))
-            .at("/api/auth/logout", post(auth::logout))
-            .at("/api/auth/logout_all", post(auth::logout_all))
-            .at("/api/users/:id", get(users::get))
-            .at("/api/users/:id/stat", get(users::get_full))
-            .at("/api/rooms", get(http::rooms::get_rooms_list).post(http::rooms::create))
-            .at("/api/rooms/:id", patch(http::rooms::update))
-            .at("/api/rooms/:id/join", post(http::rooms::join))
-            .at("/api/rooms/:id/ready", post(http::rooms::ready))
-            .at("/api/rooms/:id/leave", post(http::rooms::leave))
-            .at("/api/rooms/:id/game", get(http::rooms::game::get).post(http::rooms::game::start))
-            .at("/api/rooms/:id/game/play", post(http::rooms::game::play))
-            .at("/api/rooms/:id/game/play/:card_id", post(http::rooms::game::play))
+            let accounts_repo = pg_repo::Accounts::new(db.clone());
+            let accounts_service = AccountsService::new(accounts_repo);
+
+            let savefiles_repo = pg_repo::Savefiles::new(db.clone());
+            let savefiles_service = SavefilesService::new(savefiles_repo);
+            
+            let app = api_routes()
             .with(Cors::new().allow_origin_regex("*")) //Налаштування CORS політики
             .with(AddData::new(Arc::new(db.clone()))) //Передача посилання на з'єднання БД в аргументи функцій
-            .with(AddData::new(Arc::new(service::Accounts::new(pg_repo::Accounts::new(db.clone())))))
+            .with(AddData::new(Arc::new(accounts_service)))
+            .with(AddData::new(Arc::new(savefiles_service)))
             .with(AddData::new(Arc::new(RwLock::new(Players::new())))) //Передача посилання на список авторизованих по gateway гравців
             .with(AddData::new(Arc::new(RwLock::new(Rooms::new())))); //Передача посилання на список кімнат
             Ok(app.into()) //Завершення налаштування та передача Route в Shuttle Runtime.

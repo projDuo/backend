@@ -1,7 +1,27 @@
 use super::entities::*;
-use crate::domain;
-use crate::payloads::accounts as payloads;
-use sea_orm::Set;
+use crate::{database::core::RepositoryError, domain};
+use crate::service::{accounts::Service, payloads::accounts as payloads};
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Set};
+
+pub type Accounts = super::Repository<domain::accounts::Account, prelude::Accounts>;
+
+impl Service for Accounts {
+    type Error = RepositoryError;
+
+    async fn read_by_login(&self, login: &str) -> Result<domain::accounts::Account, crate::database::core::RepositoryError> {
+        let model = prelude::Accounts::find()
+            .filter(accounts::Column::Login.eq(login))
+            .one(&self.db)
+            .await
+            .map_err(RepositoryError::from)?;
+
+        if let Some(v) = model {
+            Ok(v.into())
+        } else {
+            Err(RepositoryError::NotFound("E".to_string()))
+        }
+    }
+}
 
 impl From<payloads::AccountCreate> for accounts::ActiveModel {
     fn from(value: payloads::AccountCreate) -> Self {

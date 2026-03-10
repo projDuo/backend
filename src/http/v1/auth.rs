@@ -6,7 +6,7 @@ use poem::{
 };
 use sea_orm::{prelude::Uuid, DatabaseConnection, DbErr, TryInsertResult};
 use std::{ops::Deref, sync::Arc};
-use crate::database::queries::{self, sessions::{delete, delete_all_of_account }};
+use crate::AccountsService;
 use sha256;
 use serde::Deserialize;
 
@@ -89,19 +89,4 @@ pub async fn logout_all(req: &Request, db: Data<&Arc<DatabaseConnection>>) -> Re
         .map_err(|_| StatusCode::BAD_REQUEST)?;
     delete_all_of_account(db, token).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR).await?; //виклик функції для видалення усіх сесії за токеном
     Ok(StatusCode::OK)
-}
-
-#[derive(Debug, Deserialize)]
-struct Exists { //Структура, яка задає які поля запит на перевірку існування акаунта повинен містити
-    login: String, //логін
-}
-#[handler]
-pub async fn exists(req: Json<Exists>, db: Data<&Arc<DatabaseConnection>>) -> Result<StatusCode, StatusCode> {
-    let db = db.deref().as_ref();
-    queries::accounts::by_uuid_or_login(req.login.clone()) //виклик функції пошуку акаунта в БД та перетворення результату у HTTP-код
-        .one(db)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .ok_or(StatusCode::NOT_FOUND)
-        .map(|_| StatusCode::OK)
 }

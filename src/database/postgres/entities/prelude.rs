@@ -3,5 +3,5 @@
 pub use super::accounts::Entity as Accounts;
 pub use super::roles::Entity as Roles;
 pub use super::roles_assigned::Entity as RolesAssigned;
-pub use super::savefile::Entity as Savefile;
+pub use super::savefiles::Entity as Savefiles;
 pub use super::sessions::Entity as Sessions;

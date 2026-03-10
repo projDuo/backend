@@ -1,4 +1,11 @@
-pub mod entities;
-pub mod repository;
+pub mod crud;
+pub mod error;
 
-use super::repository as generic_repository;
+pub mod entities;
+pub mod accounts;
+pub mod savefiles;
+
+pub use accounts::Accounts;
+pub use savefiles::Savefiles;
+
+use super::core::*;

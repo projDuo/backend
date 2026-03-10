@@ -1,6 +1,8 @@
 pub mod error;
 pub use error::RepositoryError;
 
+pub mod accounts;
+
 use sea_orm::{
     DatabaseConnection, EntityTrait
 };

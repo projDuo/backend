@@ -5,5 +5,5 @@ pub mod prelude;
 pub mod accounts;
 pub mod roles;
 pub mod roles_assigned;
-pub mod savefile;
+pub mod savefiles;
 pub mod sessions;

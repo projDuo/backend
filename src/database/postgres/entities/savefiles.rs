@@ -3,16 +3,16 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
-#[sea_orm(table_name = "savefile")]
+#[sea_orm(table_name = "savefiles")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
     pub games_played: i64,
     pub points: i64,
     pub cards_had: i64,
-    pub wins: i64,
-    pub loses: i64,
-    pub max_points: i64,
+    pub wins: i32,
+    pub loses: i32,
+    pub max_points: i16,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
