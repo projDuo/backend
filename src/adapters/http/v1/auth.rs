@@ -19,18 +19,18 @@ pub async fn start_session(db: &DatabaseConnection, login_: String, password: St
         .ok_or(StatusCode::NOT_FOUND)?;
 
     if account.password == password { //якщо пароль правильний
-        let token = Uuid::new_v4(); //створення нового токену
-        match queries::sessions::create(account.id, token) //збереження в БД
+        let HashedToken = Uuid::new_v4(); //створення нового токену
+        match queries::sessions::create(account.id, HashedToken) //збереження в БД
             .exec(db)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         {
-            TryInsertResult::Inserted(_) => Ok(token.to_string()), //повернення HTTP коду в залежності від результату, Ok - 200
+            TryInsertResult::Inserted(_) => Ok(HashedToken.to_string()), //повернення HTTP коду в залежності від результату, Ok - 200
             TryInsertResult::Conflicted => Err(StatusCode::CONFLICT),
             _ => Err(StatusCode::BAD_REQUEST),
         }
     } else { Err(StatusCode::FORBIDDEN) } //Інакше повернути помилку
-        .map(|token| Response::builder().body(token)) //Повернення відповіді з токеном
+        .map(|HashedToken| Response::builder().body(HashedToken)) //Повернення відповіді з токеном
 }
 
 #[derive(Debug, Deserialize)]
@@ -76,17 +76,17 @@ pub async fn login(req: Json<Login>, db: Data<&Arc<DatabaseConnection>>) -> Resu
 #[handler]
 pub async fn logout(req: &Request, db: Data<&Arc<DatabaseConnection>>) -> Result<StatusCode, StatusCode> {
     let db = db.deref().as_ref();
-    let token = Uuid::parse_str(req.header("authorization").ok_or(StatusCode::UNAUTHORIZED)?)
+    let HashedToken = Uuid::parse_str(req.header("authorization").ok_or(StatusCode::UNAUTHORIZED)?)
         .map_err(|_| StatusCode::BAD_REQUEST)?; //повернути помилку якщо токен не вказаний в запиті 
-    delete(db, token).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR).await?; //виклик функції для видалення сесії за токеном
+    delete(db, HashedToken).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR).await?; //виклик функції для видалення сесії за токеном
     Ok(StatusCode::OK)
 }
 
 #[handler]
 pub async fn logout_all(req: &Request, db: Data<&Arc<DatabaseConnection>>) -> Result<StatusCode, StatusCode> {
     let db = db.deref().as_ref();
-    let token = Uuid::parse_str(req.header("authorization").ok_or(StatusCode::UNAUTHORIZED)?)
+    let HashedToken = Uuid::parse_str(req.header("authorization").ok_or(StatusCode::UNAUTHORIZED)?)
         .map_err(|_| StatusCode::BAD_REQUEST)?;
-    delete_all_of_account(db, token).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR).await?; //виклик функції для видалення усіх сесії за токеном
+    delete_all_of_account(db, HashedToken).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR).await?; //виклик функції для видалення усіх сесії за токеном
     Ok(StatusCode::OK)
 }

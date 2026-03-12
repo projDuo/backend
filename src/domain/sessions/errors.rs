@@ -1,7 +1,7 @@
 
 use thiserror::Error;
 
-use super::InternalRepositoryError;
+use super::InternalError;
 
 #[derive(Debug, Error)]
 pub enum SessionError {
@@ -16,5 +16,5 @@ pub enum SessionError {
     #[error("Invalid token provided.")]
     Invalid,
     #[error("Database is unavailable")]
-    Infrastructure(#[from] InternalRepositoryError),
+    Infrastructure(#[from] InternalError),
 }

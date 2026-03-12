@@ -3,7 +3,7 @@ pub mod ports;
 pub mod commands;
 pub mod errors;
 
-use super::InternalRepositoryError;
+use super::InternalError;
 
 pub use entities::Savefile;
 pub use errors::*;

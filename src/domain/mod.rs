@@ -1,4 +1,4 @@
-pub mod game;
+//pub mod game;
 pub mod accounts;
 pub mod savefiles;
 pub mod sessions;
@@ -20,4 +20,4 @@ pub trait ErrorType {
 
 #[derive(Clone, Debug, Error)]
 #[error("Internal repository error: {0}")]
-pub struct InternalRepositoryError(pub String);
+pub struct InternalError(pub String);

@@ -4,7 +4,7 @@ pub mod errors;
 pub mod ports;
 pub mod value_objects;
 
-pub use super::InternalRepositoryError;
+pub use super::InternalError;
 
 pub use entities::Account;
 pub use value_objects::*;

@@ -1,5 +1,5 @@
 use serde::Serialize;
-use crate::gateway::events::{SharedTableEvents, TableEvents};
+use crate::adapters::gateway::events::{SharedTableEvents, TableEvents};
 use std::{
     borrow::Borrow,
     collections::HashSet,

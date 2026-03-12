@@ -2,7 +2,7 @@ use sea_orm::{ActiveModelBehavior, ActiveModelTrait, DbErr, EntityTrait, Set};
 use async_trait::async_trait;
 
 use crate::domain::savefiles::*;
-use super::InternalRepositoryError;
+use super::InternalError;
 use super::entities::savefiles::*;
 
 impl From<Model> for Savefile {
@@ -33,7 +33,7 @@ impl From<DbErr> for SavefileError {
 
 #[async_trait]
 impl SavefilesRepository for super::Postgres {
-    async fn find_by_id(&self, id: uuid::Uuid) -> Result<Option<Savefile>, InternalRepositoryError> {
+    async fn find_by_id(&self, id: uuid::Uuid) -> Result<Option<Savefile>, InternalError> {
         let entity = Entity::find_by_id(id).one(&self.db).await?
             .map(Savefile::from);
         

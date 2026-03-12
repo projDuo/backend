@@ -27,14 +27,14 @@ impl From<DbErr> for AccountError {
 
 #[async_trait]
 impl AccountsRepository for super::Postgres {
-    async fn find_by_id(&self, id: uuid::Uuid) -> Result<Option<Account>, InternalRepositoryError> {
+    async fn find_by_id(&self, id: uuid::Uuid) -> Result<Option<Account>, InternalError> {
         let entity = Entity::find_by_id(id).one(&self.db).await?
             .map(Account::from);
         
         Ok(entity)
     }
 
-    async fn find_by_login(&self, login: &Login) -> Result<Option<Account>, InternalRepositoryError> {
+    async fn find_by_login(&self, login: Login) -> Result<Option<Account>, InternalError> {
         let entity = Entity::find()
             .filter(Column::Login.eq(login.to_string()))
             .one(&self.db)
@@ -47,7 +47,7 @@ impl AccountsRepository for super::Postgres {
     async fn insert_account(&self, cmd: CreateAccountRequest) -> Result<Account, AccountError> {
         let active_model = ActiveModel {
             login: Set(cmd.login.to_string()),
-            password: Set(cmd.password.hash()),
+            password: Set(cmd.password.to_string()),
             ..Default::default()
         };
 
@@ -73,7 +73,7 @@ impl AccountsRepository for super::Postgres {
         }
 
         if let Some(v) = cmd.password {
-            active_model.set(Column::Password, v.hash().into());
+            active_model.set(Column::Password, v.to_string().into());
         }
 
         if let Some(v) = cmd.display_name {

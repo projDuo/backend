@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use crate::domain::accounts::errors::*;
 use crate::domain::sessions::errors::*;
-use crate::domain::InternalRepositoryError;
+use crate::domain::InternalError;
 
 #[derive(Debug, Error)]
 pub enum AuthError {
@@ -11,5 +11,5 @@ pub enum AuthError {
     #[error("Session failure: {0}")]
     Session(#[from] SessionError),
     #[error("Database is unavailable")]
-    Infrastructure(#[from] InternalRepositoryError),
+    Infrastructure(#[from] InternalError),
 }

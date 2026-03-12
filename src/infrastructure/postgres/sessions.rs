@@ -13,7 +13,7 @@ use async_trait::async_trait;
 use uuid::Uuid;
 
 use crate::domain::sessions::*;
-use super::InternalRepositoryError;
+use super::InternalError;
 use super::entities::sessions::*;
 
 impl From<Model> for Session {
@@ -22,7 +22,7 @@ impl From<Model> for Session {
             value.id,
             value.account_id,
             value.created_at,
-            value.expires_at,
+            value.expires_at.into(),
             value.is_revoked,
             value.token.into()
         )
@@ -43,14 +43,14 @@ impl From<DbErr> for SessionError {
 
 #[async_trait]
 impl SessionsRepository for super::Postgres {
-    async fn find_by_id(&self, id: uuid::Uuid) -> Result<Option<Session>, InternalRepositoryError> {
+    async fn find_by_id(&self, id: uuid::Uuid) -> Result<Option<Session>, InternalError> {
         let entity = Entity::find_by_id(id).one(&self.db).await?
             .map(Session::from);
         
         Ok(entity)
     }
 
-    async fn find_by_token(&self, token: &SessionToken) -> Result<Option<Session>, InternalRepositoryError> {
+    async fn find_by_token(&self, token: HashedToken) -> Result<Option<Session>, InternalError> {
         let entity = Entity::find()
             .filter(Column::Token.eq(token.to_string())).one(&self.db).await?
             .map(Session::from);
@@ -58,7 +58,7 @@ impl SessionsRepository for super::Postgres {
         Ok(entity)
     }
 
-    async fn id_by_token(&self, token: &SessionToken) -> Result<Option<Uuid>, InternalRepositoryError> {
+    async fn id_by_token(&self, token: HashedToken) -> Result<Option<Uuid>, InternalError> {
         let entity = Entity::find()
             .filter(Column::Token.eq(token.to_string()))
             .select_only()
@@ -71,7 +71,9 @@ impl SessionsRepository for super::Postgres {
 
     async fn insert_session(&self, cmd: CreateSessionRequest) -> Result<Session, SessionError> {
         let active_model = ActiveModel {
+            id: Set(cmd.id),
             account_id: Set(cmd.account_id),
+            token: Set(cmd.token),
             ..Default::default()
         };
 
@@ -104,24 +106,24 @@ impl SessionsRepository for super::Postgres {
             Ok(model.into())
         }
 
-        async fn revoke_session(&self, token: &SessionToken) -> Result<bool, InternalRepositoryError> {
+        async fn revoke_session(&self, id: Uuid) -> Result<bool, InternalError> {
             let result = Entity::update_many()
                 .col_expr(Column::IsRevoked, Expr::value(true))
-                .filter(Column::Token.eq(token.as_str()))
+                .filter(Column::Id.eq(id))
                 .exec(&self.db)
                 .await
-                .map_err(InternalRepositoryError::from)?;
+                .map_err(InternalError::from)?;
             
             Ok(result.rows_affected > 0)
         }
 
-        async fn revoke_all_sessions(&self, account_id: Uuid) -> Result<bool, InternalRepositoryError> {
+        async fn revoke_all_sessions(&self, account_id: Uuid) -> Result<bool, InternalError> {
             let result = Entity::update_many()
                 .col_expr(Column::IsRevoked, Expr::value(true))
                 .filter(Column::AccountId.eq(account_id))
                 .exec(&self.db)
                 .await
-                .map_err(InternalRepositoryError::from)?;
+                .map_err(InternalError::from)?;
             
             Ok(result.rows_affected > 0)
         }

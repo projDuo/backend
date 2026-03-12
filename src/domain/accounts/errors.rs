@@ -1,8 +1,8 @@
 use thiserror::Error;
-use super::InternalRepositoryError;
+use super::InternalError;
 
 #[derive(Clone, Debug, Error)]
-#[error("A password must be at least 6 characters long")]
+#[error("A password must be at least 8 characters long and consist of letters, special characters and numbers.")]
 pub struct WeakPassword;
 
 #[derive(Clone, Debug, Error)]
@@ -22,5 +22,5 @@ pub enum AccountError {
     #[error("Invalid credentials provided.")]
     InvalidCredentials,
     #[error("Database is unavailable")]
-    Infrastructure(#[from] InternalRepositoryError),
+    Infrastructure(#[from] InternalError),
 }

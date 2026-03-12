@@ -1,5 +1,3 @@
-pub mod error;
-
 pub mod entities;
 pub mod accounts;
 pub mod savefiles;
@@ -7,8 +5,7 @@ pub mod sessions;
 
 use sea_orm::{Database, DatabaseConnection, DbErr};
 
-use super::core::*;
-use crate::domain::InternalRepositoryError;
+use crate::domain::InternalError;
 
 pub struct Postgres {
     db: DatabaseConnection
@@ -68,7 +65,7 @@ impl PostgresDetails {
     }
 }
 
-impl From<DbErr> for InternalRepositoryError {
+impl From<DbErr> for InternalError {
     fn from(value: DbErr) -> Self {
         Self(value.to_string())
     }

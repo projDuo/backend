@@ -1,4 +1,4 @@
-use super::InternalRepositoryError;
+use super::InternalError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SavefileError {
@@ -9,5 +9,5 @@ pub enum SavefileError {
     Duplicate,
     
     #[error("Database is unavailable")]
-    Infrastructure(#[from] InternalRepositoryError),
+    Infrastructure(#[from] InternalError),
 }

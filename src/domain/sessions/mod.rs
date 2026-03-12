@@ -1,10 +1,10 @@
-pub mod value_objects;
 pub mod entities;
 pub mod errors;
 pub mod ports;
 pub mod commands;
+pub mod value_objects;
 
-use super::InternalRepositoryError;
+use super::InternalError;
 
 pub use entities::*;
 pub use errors::*;

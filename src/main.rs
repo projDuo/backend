@@ -1,8 +1,7 @@
-mod database;
-mod gateway;
-mod http;
+mod infrastructure;
+mod adapters;
 mod domain;
-mod service;
+mod application;
 mod runtime_storage;
 
 use poem::{
@@ -12,16 +11,13 @@ use shuttle_poem::ShuttlePoem;
 use shuttle_runtime::SecretStore;
 use std::{collections::HashSet, sync::Arc};
 use tokio::sync::RwLock;
-use http::*;
-use domain::game;
-use database::postgres as pg_repo;
 
 
 pub type Players = HashSet::<gateway::sessions::User>;
 pub type Rooms = runtime_storage::DataTable::<game::rooms::Room>;
 
-pub type AccountsService = service::Accounts<pg_repo::Accounts>;
-pub type SavefilesService = service::Service<domain::savefiles::Savefile, pg_repo::Savefiles>;
+pub type AccountsService = application::Accounts<pg_repo::Accounts>;
+pub type SavefilesService = application::Service<domain::savefiles::Savefile, pg_repo::Savefiles>;
 
 #[shuttle_runtime::main]
 async fn poem(#[shuttle_runtime::Secrets] secret_store: SecretStore) -> ShuttlePoem<impl poem::Endpoint> {

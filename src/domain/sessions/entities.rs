@@ -13,11 +13,11 @@ pub struct Session {
     #[getset(get = "pub")]
     created_at: DateTimeWithTimeZone,
     #[getset(get = "pub")]
-    expires_at: DateTimeWithTimeZone,
+    pub expires_at: ExpiresAt,
     #[getset(get = "pub")]
-    is_revoked: bool,
+    pub is_revoked: bool,
     #[getset(get = "pub")]
-    token: SessionToken,
+    pub token: String,
 }
 
 impl Session {
@@ -25,9 +25,9 @@ impl Session {
         id: Uuid,
         account_id: Uuid,
         created_at: DateTimeWithTimeZone,
-        expires_at: DateTimeWithTimeZone,
+        expires_at: ExpiresAt,
         is_revoked: bool,
-        token: SessionToken,
+        token: String,
     ) -> Self {
         Self {
             id,
@@ -43,7 +43,7 @@ impl Session {
         let now = chrono::Utc::now();
         
         if !(now >= self.created_at) { return Err(SessionError::NotYetValid) };
-        if !(now < self.expires_at) { return Err(SessionError::Expired) };
+        if !(now < self.expires_at.as_utc()) { return Err(SessionError::Expired) };
         if self.is_revoked { return Err(SessionError::Revoked) };
 
         Ok(())
