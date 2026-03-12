@@ -8,9 +8,11 @@ async-trait = "0.1"
 chrono = "0.4.38"
 futures = "0.3.30"
 futures-util = "0.3.30"
+getset = "0.1.6"
 poem = { version = "3.1.1", features = ["session", "websocket"] }
 rand = "0.8.5"
 random-string = "1.1.0"
+regex = "1.12.3"
 sea-orm = { version = "1.0.1", features = ["sqlx-postgres", "sqlx-sqlite", "runtime-tokio-native-tls"] }
 sea-orm-migration = "1.1.0"
 serde = "1.0.210"

@@ -25,26 +25,27 @@ pub type SavefilesService = service::Service<domain::savefiles::Savefile, pg_rep
 
 #[shuttle_runtime::main]
 async fn poem(#[shuttle_runtime::Secrets] secret_store: SecretStore) -> ShuttlePoem<impl poem::Endpoint> {
-    let db = match ( //Перевірка на наявність усих змінних необхідних для початку роботи
+    let db = if let (Some(host), Some(name), Some(Ok(port)), Some(user), Some(pass)) = (
         secret_store.get("DB_HOST"),
         secret_store.get("DB_NAME"),
-        secret_store.get("DB_PORT"),
+        secret_store.get("DB_PORT").map(|v| v.parse()),
         secret_store.get("DB_USER"),
         secret_store.get("DB_PASS"),
     ) {
-        (Some(host), Some(name), Some(port), Some(user), Some(pass)) => { //Якщо усі змінні присутні
-            let uri = format!(
-                "postgres://{}:{}@{}:{}/{}",
-                user, pass, host, port, name
-            );
-            match sea_orm::Database::connect(uri).await { //Спроба з'єднатися
-                Ok(connection) => Ok(connection), //при з'єднані повернути у змінну db з'єднання
-                Err(e) => Err(shuttle_runtime::Error::Database(shuttle_runtime::CustomError::new(e).to_string())), //В іншому випадку повернути у змінну db помилку
-            }
-        },
-        _ => Err(shuttle_runtime::Error::Database("Not all database parameters have been provided. The execution is aborted!".to_string())), //В іншому випадку повернути у змінну db помилку
-    };
+        let pg_details = database::postgres::PostgresDetails::new(
+            host.as_str(),
+            name.as_str(),
+            port,
+            user.as_str(),
+            pass.as_str()
+        );
 
+        database::postgres::Postgres::from_details(pg_details).await
+            .map_err(|e| shuttle_runtime::Error::Database(shuttle_runtime::CustomError::new(e).to_string()))
+    } else {
+        Err(shuttle_runtime::Error::Database("Not all database parameters were provided. The execution has been aborted!".to_string())) //В іншому випадку повернути у змінну db помилку
+    };
+    
     match db {
         Ok(db) => { //Якщо змінна db містить з'єднання
             let accounts_repo = pg_repo::Accounts::new(db.clone());

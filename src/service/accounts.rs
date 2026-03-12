@@ -1,7 +1,33 @@
 
-use crate::domain::{accounts as domain};
-use uuid::Uuid;
-use super::Error;
+use crate::domain::accounts::*;
+use async_trait::async_trait;
+pub struct Service<R: AccountsRepository> {
+    repo: R,
+}
+
+#[async_trait]
+impl<R> AccountsService for Service<R>
+where R: AccountsRepository + Send + Sync {
+    async fn register(&self, cmd: CreateAccountRequest) -> Result<Account, AccountError> {
+        self.repo.insert_account(cmd).await
+    }
+
+    async fn login(&self, login: &Login, password: &Password) -> Result<Account, AccountError> {
+        let account = self.repo.find_by_login(login).await?
+            .ok_or(AccountError::InvalidCredentials)?;
+
+        if account.password != *password { return Err(AccountError::InvalidCredentials) };
+
+        Ok(account)
+    }
+    
+    async fn is_login_taken(&self, login: &Login) -> Result<bool, InternalRepositoryError> {
+        let account = self.repo.find_by_login(login).await?;
+        Ok(account.is_some())
+    }
+}
+
+/*
 
 pub type Accounts<R> = super::Service<domain::Account, R>;
 
@@ -68,3 +94,4 @@ where
         self.repo.read_by_login(login).await.map_err(Self::Error::from)
     }
 }
+    */
