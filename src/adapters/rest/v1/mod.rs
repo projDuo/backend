@@ -2,6 +2,7 @@ pub mod auth;
 pub mod rooms;
 pub mod accounts;
 pub mod errors;
+pub mod sessions;
 
 // src/http/v1/mod.rs
 use poem::{get, head, patch, post, Route};

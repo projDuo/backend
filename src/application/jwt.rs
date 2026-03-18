@@ -16,13 +16,13 @@ pub struct Claims {
     pub iat: usize,         // Issued at
 }
 
-pub struct JwtService {
+pub struct Service {
     secret: String,
     refresh_expires_after: Duration,
     access_expires_after: Duration, 
 }
 
-impl JwtService {
+impl Service {
     pub fn new(
         secret: impl Into<String>,
         refresh_expires_after: Duration,
@@ -36,7 +36,7 @@ impl JwtService {
     }
 }
 
-impl TokenProvider for JwtService {
+impl TokenProvider for Service {
     fn refresh_expires_after(&self) -> Duration {
         self.refresh_expires_after
     }

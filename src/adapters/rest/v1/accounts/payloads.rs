@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::domain::{
     DateTimeWithTimeZone,
@@ -18,21 +18,21 @@ impl From<Account> for AccountReadPublic {
     fn from(value: Account) -> Self {
         Self {
             id: value.id,
-            login: value.login,
-            display_name: value.display_name,
+            login: value.login.to_string(),
+            display_name: value.display_name.map(|v| v.to_string()),
             created_at: value.created_at
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct AccountStats { //Структура, яка описує статистику гравця
-    games_played: i64, //ігор зіграно
-    points: i64, //очків
-    cards_had: i64, //карт мав загалом
-    wins: i32, //кількість виграшів
-    loses: i32, //кількість виграшів
-    max_points: i16, //максимальна кількість очків за гру
+pub struct AccountStats { //Структура, яка описує статистику гравця
+    games_played: u64, //ігор зіграно
+    points: u64, //очків
+    cards_had: u64, //карт мав загалом
+    wins: u32, //кількість виграшів
+    loses: u32, //кількість виграшів
+    max_points: u16, //максимальна кількість очків за гру
 }
 
 impl From<Savefile> for AccountStats {
@@ -49,9 +49,15 @@ impl From<Savefile> for AccountStats {
 }
 
 #[derive(Serialize)]
-struct AccountPublicFull {
+pub struct AccountPublicFull {
     #[serde(flatten)]
     pub account: AccountReadPublic,
     #[serde(flatten)]
     pub savefile: AccountStats,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Register { //структура, яка задає які поля запит на регістрацію повинен містити
+    pub login: String, //логін
+    pub password: String, //пароль
 }

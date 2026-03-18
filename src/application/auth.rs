@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use secrecy::ExposeSecret;
 use secrecy::SecretString;
 
-struct Service<A, S, T>
+pub struct Service<A, S, T>
 where
     A: AccountsService,
     S: SessionsRepository,

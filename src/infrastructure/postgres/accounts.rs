@@ -34,7 +34,7 @@ impl AccountsRepository for super::Postgres {
         Ok(entity)
     }
 
-    async fn find_by_login(&self, login: Login) -> Result<Option<Account>, InternalError> {
+    async fn find_by_login(&self, login: String) -> Result<Option<Account>, InternalError> {
         let entity = Entity::find()
             .filter(Column::Login.eq(login.to_string()))
             .one(&self.db)

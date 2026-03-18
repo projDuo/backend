@@ -7,6 +7,7 @@ use sea_orm::{Database, DatabaseConnection, DbErr};
 
 use crate::domain::InternalError;
 
+#[derive(Clone)]
 pub struct Postgres {
     db: DatabaseConnection
 }

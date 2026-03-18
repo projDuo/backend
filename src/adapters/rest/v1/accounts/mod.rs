@@ -2,7 +2,7 @@ pub mod payloads;
 pub mod errors;
 pub mod routes;
 
-use super::errors as errors_generic;
+use super::errors as error_code;
 
 use poem::{Route, get, head};
 

@@ -2,6 +2,8 @@
 use crate::domain::accounts::*;
 use async_trait::async_trait;
 use secrecy::SecretString;
+use uuid::Uuid;
+
 pub struct Service<R: AccountsRepository> {
     repo: R,
 }
@@ -16,12 +18,27 @@ where R: AccountsRepository {
 #[async_trait]
 impl<R> AccountsService for Service<R>
 where R: AccountsRepository + Send + Sync {
+    async fn read_account(&self, id: Uuid) -> Result<Option<Account>, InternalError> {
+        self.repo.find_by_id(id).await
+    }
+
+    async fn read_account_by_login(&self, login: String) -> Result<Option<Account>, InternalError> {
+        self.repo.find_by_login(login).await
+    }
+
+    async fn read_account_by_id_or_login(&self, id: &str) -> Result<Option<Account>, InternalError> {
+        if let Ok(v) = uuid::Uuid::try_parse(id) {
+            self.read_account(v).await
+        } else {
+            self.read_account_by_login(id.to_string()).await
+        }
+    }
+
     async fn register(&self, cmd: CreateAccountRequest) -> Result<Account, AccountError> {
         self.repo.insert_account(cmd).await
     }
 
     async fn login(&self, login: String, password: SecretString) -> Result<Account, AccountError> {
-        let login = Login::from_raw(login);
         let account = self.repo.find_by_login(login).await?
             .ok_or(AccountError::InvalidCredentials)?;
 
@@ -32,7 +49,7 @@ where R: AccountsRepository + Send + Sync {
         Ok(account)
     }
     
-    async fn is_login_taken(&self, login: Login) -> Result<bool, InternalError> {
+    async fn is_login_taken(&self, login: String) -> Result<bool, InternalError> {
         let account = self.repo.find_by_login(login).await?;
         Ok(account.is_some())
     }
