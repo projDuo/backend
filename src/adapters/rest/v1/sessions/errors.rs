@@ -1,6 +1,6 @@
 use poem::http::StatusCode;
 
-use crate::{adapters::rest::v1::errors::{ErrorCode, RestError}, domain::sessions::SessionError};
+use crate::{adapters::rest::v1::errors::{ErrorCode, RestError, impl_api_error}, domain::sessions::SessionError};
 
 
 
@@ -38,3 +38,4 @@ impl RestError for SessionError {
         ErrorCode::new(code, msg)
     }
 }
+impl_api_error!(SessionError);

@@ -1,7 +1,7 @@
 use sea_orm::prelude::Uuid;
 use serde::{ Serialize, Deserialize };
 use serde_json;
-use crate::game::{self, gameplay::player::Losers};
+use crate::domain::game::{self, gameplay::player::Losers};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Payload { //Список усих можливих подій

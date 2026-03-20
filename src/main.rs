@@ -7,43 +7,57 @@ mod runtime_storage;
 use poem::{
     middleware::{ AddData, Cors }, EndpointExt
 };
-use sea_orm::DatabaseConnection;
+use chrono::TimeDelta;
 use shuttle_poem::ShuttlePoem;
 use shuttle_runtime::SecretStore;
 use std::{collections::HashSet, sync::Arc};
 use tokio::sync::RwLock;
 
+use adapters::rest::*;
 
-pub type Players = HashSet::<gateway::sessions::User>;
-pub type Rooms = runtime_storage::DataTable::<game::rooms::Room>;
+pub type Players = HashSet::<adapters::gateway::sessions::User>;
+pub type Rooms = runtime_storage::DataTable::<domain::game::rooms::Room>;
 
 use infrastructure::postgres::Postgres;
 
 type AccountsService = application::Accounts<Postgres>;
-type SessionsService = application::Sessions<Postgres>;
 type TokenProvider = application::Jwt;
 type AuthService = application::Auth<
         AccountsService,
         Postgres,
         TokenProvider>;
+type SavefilesService = application::Savefiles<Postgres>;
 
 struct AppState {
     accounts: AccountsService,
-    sessions: SessionsService,
     auth: AuthService,
+    savefiles: SavefilesService,
 }
 
 impl AppState {
-    pub fn new(db: Postgres, secret_store: SecretStore) -> Self {
+    pub fn new(db: Postgres, secret_store: SecretStore) -> anyhow::Result<Self> {
+        let secret = secret_store.get("JWT_SECRET")
+            .ok_or_else(|| anyhow::anyhow!("JWT_SECRET is missing"))?;
+            
+        let refresh_expires_after = secret_store.get("JWT_REFRESH_EXPIRES")
+            .and_then(|v| v.parse::<i64>().ok())
+            .map(TimeDelta::days)
+            .unwrap_or_else(|| TimeDelta::days(30));
+
+        let access_expires_after = secret_store.get("JWT_ACCESS_EXPIRES")
+            .and_then(|v| v.parse::<i64>().ok())
+            .map(TimeDelta::minutes)
+            .unwrap_or_else(|| TimeDelta::minutes(15));
+
         let accounts = AccountsService::new(db.clone());
-        let sessions = SessionsService::new(db.clone());
         let jwt = TokenProvider::new(secret, refresh_expires_after, access_expires_after);
-        let auth = AuthService::new(accounts, db.clone(), jwt);
-        Self {
+        let auth = AuthService::new(accounts.clone(), db.clone(), jwt);
+        let savefiles = SavefilesService::new(db);
+        Ok(Self {
             accounts,
-            sessions,
-            auth
-        }
+            auth,
+            savefiles,
+        })
     }
 }
 
@@ -72,12 +86,12 @@ async fn poem(#[shuttle_runtime::Secrets] secret_store: SecretStore) -> ShuttleP
     
     match db {
         Ok(db) => { //Якщо змінна db містить з'єднання
-            let state = AppState::new(db, secret_store);
+            let state = AppState::new(db.clone(), secret_store)?;
             
-            let app = api_routes()
+            let app = api_routes(Arc::new(state.auth.clone()), Arc::new(db.clone()))
             .with(Cors::new().allow_origin_regex("*")) //Налаштування CORS політики
             .with(AddData::new(Arc::new(db.clone()))) //Передача посилання на з'єднання БД в аргументи функцій
-            .with(AddData::new(Arc::new(AppState)))
+            .with(AddData::new(Arc::new(state)))
             .with(AddData::new(Arc::new(RwLock::new(Players::new())))) //Передача посилання на список авторизованих по gateway гравців
             .with(AddData::new(Arc::new(RwLock::new(Rooms::new())))); //Передача посилання на список кімнат
             Ok(app.into()) //Завершення налаштування та передача Route в Shuttle Runtime.

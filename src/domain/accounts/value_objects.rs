@@ -19,7 +19,7 @@ pub struct Password(String);
 
 impl Password {
     pub async fn new(raw: SecretString) -> Result<Self, WeakPassword> {
-        if raw.expose_secret().len() < 6 {
+        if raw.expose_secret().len() < 6 && PASSWORD_REGEX.is_match(raw.expose_secret()) {
             return Err(WeakPassword);
         }
 

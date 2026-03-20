@@ -1,23 +1,24 @@
 
-use sea_orm::{prelude::Uuid, DatabaseConnection };
+use sea_orm::{prelude::Uuid};
 use std::sync::Arc;
-use crate::database::queries;
+use crate::{AppState, domain::auth::AuthService};
 use tokio::sync::{ broadcast::Sender, RwLock };
 use super::payloads::*;
+use crate::domain::accounts::ports::AccountsService;
 
 //Receive
 
 pub async fn identify( //Функція яка ідентифікує акаунт за токеном, авторизує та відновлює сесію
-    db: &DatabaseConnection,
+    state: &AppState,
     payload: Identify,
     players_ptr: &Arc<RwLock<crate::Players>>,
     rooms_ptr: &Arc<RwLock<crate::Rooms>>,
     sender: Sender<String>,
     store_in: &mut Option<Uuid>,
 ) -> Result<Payload, Error> {
-    let token = Uuid::parse_str(payload.token().as_str()).map_err(|_| Error::BadToken)?; //Парсинг токену в Uuid
-    let uuid = queries::sessions::handle(db, token).await
-        .map_err(|_| Error::InvalidToken)?; //Перевірка токену на валідність та доставання id акаунту, повернення помилки у разі невірного токену
+    let token = payload.token();
+    let uuid = state.auth.verify(token.into()).await
+        .map_err(|_| Error::InvalidToken)?.account_id; //Перевірка токену на валідність та доставання id акаунту, повернення помилки у разі невірного токену
 
     let mut players = players_ptr.write().await; //замок на таблицю гравців
     let player = if let Some(player) = players.get(&uuid).cloned().as_mut() { //якщо гравець вже авторизований
@@ -30,7 +31,7 @@ pub async fn identify( //Функція яка ідентифікує акаун
         drop(rooms); //відімкнути таблицю кімнат
         player.to_owned() //клонування гравця з таблиці та повернути у якості результату замикання
     } else { //інакше
-        let account = queries::accounts::by_uuid(uuid).one(db).await
+        let account = state.accounts.read_account(uuid).await
             .map_err(|_| Error::InternalServerError)?
             .ok_or(Error::InvalidToken)?; //Дістати акаунт за Uuid
         let player = super::sessions::User::from_account(account, sender); //та перетворити у сесію

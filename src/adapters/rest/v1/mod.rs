@@ -3,35 +3,40 @@ pub mod rooms;
 pub mod accounts;
 pub mod errors;
 pub mod sessions;
+pub mod savefiles;
 
 // src/http/v1/mod.rs
-use poem::{get, head, patch, post, Route};
+use poem::{EndpointExt, Route, get, patch, post};
+use std::sync::Arc;
+use crate::domain::auth::AuthService;
+use crate::domain::sessions::SessionsRepository;
 // pub mod payloads; // If you moved them here!
 
+use auth::middleware::AuthMiddleware;
 
-pub fn routes() -> Route {
+pub fn routes(
+    auth_service: Arc<dyn AuthService + Send + Sync>,
+    sessions_repo: Arc<dyn SessionsRepository + Send + Sync>
+) -> Route {
+    let auth_middleware = AuthMiddleware::new(auth_service, sessions_repo);
     Route::new()
-        // Notice: No "/api/" prefix here anymore!
-        .at("/hello_world", get(hello_world)) 
-        
-        // Auth
-        .at("/auth/register", head(auth::exists).post(auth::register))
-        .at("/auth/login", post(auth::login))
-        .at("/auth/logout", post(auth::logout))
-        .at("/auth/logout_all", post(auth::logout_all))
-        
-        // Users
+        .at("/hello_world", get(hello_world))
+        .nest("/auth", auth::routes())
         .nest("/accounts", accounts::routes())
+        .nest("/savefiles", savefiles::routes())
+        .at("/", get(rooms::get_rooms_list).post(rooms::create.with(&auth_middleware)))
         
-        // Rooms & Game (Removed the `http::` prefix from the function calls)
-        .at("/rooms", get(rooms::get_rooms_list).post(rooms::create))
-        .at("/rooms/:id", patch(rooms::update))
-        .at("/rooms/:id/join", post(rooms::join))
-        .at("/rooms/:id/ready", post(rooms::ready))
-        .at("/rooms/:id/leave", post(rooms::leave))
-        .at("/rooms/:id/game", get(rooms::game::get).post(rooms::game::start))
-        .at("/rooms/:id/game/play", post(rooms::game::play))
-        .at("/rooms/:id/game/play/:card_id", post(rooms::game::play))
+        .at("/:id", patch(rooms::update).with(&auth_middleware))
+        .at("/:id/join", post(rooms::join).with(&auth_middleware))
+        .at("/:id/ready", post(rooms::ready).with(&auth_middleware))
+        .at("/:id/leave", post(rooms::leave).with(&auth_middleware))
+
+        .at("/:id/game", 
+            get(rooms::game::get).post(rooms::game::start)
+            .with(&auth_middleware)
+        )
+        .at("/:id/game/play", post(rooms::game::play).with(&auth_middleware))
+        .at("/:id/game/play/:card_id", post(rooms::game::play).with(&auth_middleware))
 }
 
 #[poem::handler]

@@ -4,7 +4,7 @@ use getset::Getters;
 #[derive(Getters)]
 pub struct Savefile {
     #[getset(get = "pub")]
-    pub id: Uuid,
+    id: Uuid,
     #[getset(get = "pub")]
     pub games_played: u64,
     #[getset(get = "pub")]

@@ -7,12 +7,11 @@ use random_string;
 use serde::{ser::SerializeStruct, Serialize};
 use player::Player;
 use crate::{
-    gateway::{ events::TableEvents, payloads::Payload },
+    adapters::gateway::{ events::TableEvents, payloads::Payload },
     runtime_storage::{ DataTable, SharedTable },
-    game::gameplay::Ok,
 };
 use futures::executor;
-use super::gameplay::{self, Game};
+use super::gameplay::{self, Game, Ok};
 
 #[derive(Debug, Serialize)]
 pub enum Error<'a> { //Список усіх помилок кімнат
@@ -57,13 +56,13 @@ impl Default for Room
 impl<'a, 'b> Room
 {
     //Метод створення кімнати
-    pub fn create(name: String, is_public: bool, password: Option<String>, owner: Uuid, max_players: usize /*sender: Sender<String>*/) -> Result<Self, Error<'b>> {
+    pub async fn create(name: String, is_public: bool, password: Option<String>, owner: Uuid, max_players: usize, sender: Sender<String>) -> Result<Self, Error<'b>> {
         let mut room = Self::default(); //Створення нової кімнати з значеннями за замовченням
         room.set_name(name)?; //задання назви,
         room.is_public = is_public; //публічності,
         room.set_password(password.clone())?; //пароля,
         room.set_max_players(max_players)?; //макс. кільк. гравців,
-        //room.players.write().await.0.insert(Player::new(owner, sender));
+        room.players.write().await.0.insert(Player::new(owner, sender));
         room.set_owner(owner.clone())?; //назначення його власником
         //при помилці будь-якого сеттера, створення завершиться помилкою, інакше метод повертає екземпляр
         Ok(room)

@@ -3,7 +3,6 @@ use uuid::Uuid;
 use crate::domain::{
     DateTimeWithTimeZone,
     accounts::Account,
-    savefiles::Savefile,
 };
 
 #[derive(Debug, Serialize)]
@@ -23,37 +22,6 @@ impl From<Account> for AccountReadPublic {
             created_at: value.created_at
         }
     }
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct AccountStats { //Структура, яка описує статистику гравця
-    games_played: u64, //ігор зіграно
-    points: u64, //очків
-    cards_had: u64, //карт мав загалом
-    wins: u32, //кількість виграшів
-    loses: u32, //кількість виграшів
-    max_points: u16, //максимальна кількість очків за гру
-}
-
-impl From<Savefile> for AccountStats {
-    fn from(value: Savefile) -> Self { //перетворювач рядка в статистику
-        Self {
-            games_played: value.games_played,
-            points: value.games_played,
-            cards_had: value.cards_had,
-            wins: value.wins,
-            loses: value.loses,
-            max_points: value.max_points,
-        }
-    }
-}
-
-#[derive(Serialize)]
-pub struct AccountPublicFull {
-    #[serde(flatten)]
-    pub account: AccountReadPublic,
-    #[serde(flatten)]
-    pub savefile: AccountStats,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

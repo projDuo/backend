@@ -16,8 +16,8 @@ pub trait SavefilesRepository {
 
 #[async_trait]
 pub trait SavefilesService {
-    async fn init(&self, cmd: InitSavefileRequest) -> Result<Savefile, SavefileError>;
+    async fn init(&self, id: Uuid) -> Result<Savefile, SavefileError>;
     async fn load(&self, id: Uuid) -> Result<Savefile, SavefileError>;
-    async fn save(&self, cmd: &UpdateSavefileRequest) -> Result<bool, InternalError>;
-    async fn delete(&self, id: Uuid) -> Result<Savefile, SavefileError>;
+    async fn save(&self, cmd: UpdateSavefileRequest) -> Result<Savefile, SavefileError>;
+    async fn delete(&self, id: Uuid) -> Result<(), SavefileError>;
 }

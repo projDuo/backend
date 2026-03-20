@@ -1,13 +1,10 @@
-use futures::TryFutureExt;
 use poem::{
     handler, http::StatusCode, web::{
         Data, Json
-    }, Request, Response
+    },
 };
-use sea_orm::{prelude::Uuid, DatabaseConnection, DbErr, TryInsertResult};
-use std::{ops::Deref, sync::Arc};
-use crate::{AccountsService, AppState, domain::auth::{AuthError, TokenPair}};
-use sha256;
+use std::sync::Arc;
+use crate::{AppState, adapters::rest::v1::auth::middleware::AuthenticatedUser, domain::auth::AuthError};
 use super::payloads::*;
 use crate::domain::auth::ports::AuthService;
 
@@ -18,20 +15,13 @@ pub async fn login(req: Json<Login>, state: Data<&Arc<AppState>>) -> Result<Json
 }
 
 #[handler]
-pub async fn logout(req: &Request, state: Data<&Arc<AppState>>) -> Result<StatusCode, StatusCode> {
-    state.auth.revoke(token_data)
-
-    let HashedToken = Uuid::parse_str(req.header("authorization").ok_or(StatusCode::UNAUTHORIZED)?)
-        .map_err(|_| StatusCode::BAD_REQUEST)?; //повернути помилку якщо токен не вказаний в запиті 
-    delete(db, HashedToken).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR).await?; //виклик функції для видалення сесії за токеном
+pub async fn logout(state: Data<&Arc<AppState>>, user: Data<&AuthenticatedUser>) -> Result<StatusCode, AuthError> {
+    let _ = state.auth.revoke(user.clone().into()).await?;
     Ok(StatusCode::OK)
 }
 
 #[handler]
-pub async fn logout_all(req: &Request, db: Data<&Arc<DatabaseConnection>>) -> Result<StatusCode, StatusCode> {
-    let db = db.deref().as_ref();
-    let HashedToken = Uuid::parse_str(req.header("authorization").ok_or(StatusCode::UNAUTHORIZED)?)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
-    delete_all_of_account(db, HashedToken).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR).await?; //виклик функції для видалення усіх сесії за токеном
+pub async fn logout_all(state: Data<&Arc<AppState>>, user: Data<&AuthenticatedUser>) -> Result<StatusCode, AuthError> {
+    let _ = state.auth.revoke_all(user.clone().into()).await?;
     Ok(StatusCode::OK)
 }

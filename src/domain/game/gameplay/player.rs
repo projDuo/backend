@@ -3,7 +3,7 @@ use serde::{ser::SerializeStruct, Serialize};
 use std::{ borrow::Borrow, hash::Hash, ops::Deref };
 use tokio::sync::broadcast::Sender;
 use super::card::Card;
-use crate::game::rooms;
+use super::rooms;
 
 #[derive(Debug, Clone)]
 pub struct Player { //Структура, яка описує гравця гри

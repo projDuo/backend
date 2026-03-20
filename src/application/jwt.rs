@@ -16,6 +16,7 @@ pub struct Claims {
     pub iat: usize,         // Issued at
 }
 
+#[derive(Clone)]
 pub struct Service {
     secret: String,
     refresh_expires_after: Duration,

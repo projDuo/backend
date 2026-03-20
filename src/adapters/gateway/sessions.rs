@@ -5,7 +5,7 @@ use std::{
     borrow::Borrow,
 };
 use tokio::sync::broadcast::Sender;
-use crate::database::entities;
+use crate::domain::accounts::Account;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct User { //Структура, яка описує сесію користувача
@@ -16,10 +16,10 @@ pub struct User { //Структура, яка описує сесію кори�
 }
 
 impl User {
-    pub fn from_account(account: entities::accounts::Model, sender: Sender<String>) -> Self { //конструктор з рядку БД та надсилача
+    pub fn from_account(account: Account, sender: Sender<String>) -> Self { //конструктор з рядку БД та надсилача
         Self { 
             sender,
-            uuid: account.uuid,
+            uuid: account.id,
             room: None,
         }
     }

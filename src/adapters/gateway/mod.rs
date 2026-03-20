@@ -7,13 +7,13 @@ use poem::{
     handler, http::StatusCode, web::{ websocket::{Message, WebSocket }, Data }, IntoResponse
 };
 use serde_json;
-use sea_orm::{prelude::Uuid, DatabaseConnection};
+use sea_orm::prelude::Uuid;
 use std::{sync::Arc, time::Duration};
 use tokio::sync::{ broadcast, RwLock };
 use tokio::time::sleep;
 use futures_util::StreamExt;
 use payloads::*;
-use crate::{game::rooms, runtime_storage::Table};
+use crate::{domain::game::rooms, runtime_storage::Table, AppState};
 
 fn unwrap_event(event: Result<Payload, Error>) -> Payload { //Розгортач результатів подій
     match event {
@@ -25,11 +25,11 @@ fn unwrap_event(event: Result<Payload, Error>) -> Payload { //Розгортач
 #[handler]
 pub async fn gateway(
     ws: WebSocket,
-    db: Data<&Arc<DatabaseConnection>>,
+    state: Data<&Arc<AppState>>,
     players_ptr: Data<&Arc<RwLock<crate::Players>>>,
     rooms_ptr: Data<&Arc<RwLock<crate::Rooms>>>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let db = db.to_owned(); //Доставання значення з показника
+    let state = state.to_owned(); //Доставання значення з показника
     let players = players_ptr.to_owned(); //Доставання замка таблиці гравців з показника
     let rooms = rooms_ptr.to_owned(); //Доставання замка таблиці кімнат з показника
     let (sender, mut receiver) = broadcast::channel::<String>(12); //створення нового каналу
@@ -43,7 +43,7 @@ pub async fn gateway(
             //Створення нового потоку для вхідних значень
             tokio::spawn(async move {
                 let mut user_id: Option<Uuid> = None; //id користувача у цьому замиканні 
-                let db = db.as_ref(); //Показник на з'єднання БД
+                let state = state.as_ref(); //Показник на з'єднання БД
                 //let mut rooms = rooms.write().unwrap();
                 while let Some(Ok(msg)) = stream.next().await { //Доки надходять повідомлення
                     if let Message::Text(text) = msg { //Якщо повідомлення містить текст
@@ -53,7 +53,7 @@ pub async fn gateway(
                             if let Ok(request) = request { //якщо десеріалізація пройшла успішно
                                 match request {
                                     Payload::Identify(payload) => //ідентифікація та авторизація акаунта за наданим токеном
-                                        events::identify(db, payload, &players, &rooms.clone(), sender.clone(), &mut user_id).await,
+                                        events::identify(state, payload, &players, &rooms.clone(), sender.clone(), &mut user_id).await,
                                     _ => {         // всі інші повідомлення - відмова
                                         Ok(Payload::Error( Error::Declined )) 
                                     },

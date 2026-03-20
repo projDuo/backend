@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use secrecy::ExposeSecret;
 use secrecy::SecretString;
 
+#[derive(Debug, Clone)]
 pub struct Service<A, S, T>
 where
     A: AccountsService,
@@ -81,5 +82,9 @@ where
     async fn revoke_all(&self, token_data: TokenData) -> Result<bool, AuthError> {
         let result = self.sessions_repo.revoke_all_sessions(token_data.account_id).await?;
         Ok(result)
+    }
+
+    async fn verify(&self, token: SecretString) -> Result<TokenData, AuthError> {
+        self.token_provider.verify_token(token)
     }
 }

@@ -12,6 +12,7 @@ pub trait AuthService {
     async fn refresh(&self, refresh_token: SecretString) -> Result<TokenPair, AuthError>;
     async fn revoke(&self, token_data: TokenData) -> Result<bool, AuthError>;
     async fn revoke_all(&self, token_data: TokenData) -> Result<bool, AuthError>;
+    async fn verify(&self, token_data: SecretString) -> Result<TokenData, AuthError>;
 }
 
 pub trait TokenProvider: Send + Sync {

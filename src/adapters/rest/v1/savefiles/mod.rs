@@ -4,9 +4,9 @@ pub mod routes;
 
 use super::errors as error_code;
 
-use poem::{Route, get, head};
+use poem::{Route, get};
 
 pub fn routes() -> Route {
     Route::new()
-        .at(":id", get(routes::get).head(routes::exists))
+        .at(":id", get(routes::get))
 }

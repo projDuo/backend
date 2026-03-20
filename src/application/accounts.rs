@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use secrecy::SecretString;
 use uuid::Uuid;
 
+#[derive(Clone)]
 pub struct Service<R: AccountsRepository> {
     repo: R,
 }
