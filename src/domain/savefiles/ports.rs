@@ -12,6 +12,7 @@ pub trait SavefilesRepository {
     async fn insert_savefile(&self, cmd: InitSavefileRequest) -> Result<Savefile, SavefileError>;
     async fn update_savefile(&self, cmd: UpdateSavefileRequest) -> Result<Savefile, SavefileError>;
     async fn delete_savefile(&self, id: Uuid) -> Result<(), SavefileError>;
+    async fn get_the_best(&self) -> Result<Vec<Savefile>, InternalError>;
 }
 
 #[async_trait]
@@ -20,4 +21,5 @@ pub trait SavefilesService {
     async fn load(&self, id: Uuid) -> Result<Savefile, SavefileError>;
     async fn save(&self, cmd: UpdateSavefileRequest) -> Result<Savefile, SavefileError>;
     async fn delete(&self, id: Uuid) -> Result<(), SavefileError>;
+    async fn get_the_best(&self) -> Result<Vec<Savefile>, InternalError>;
 }

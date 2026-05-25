@@ -11,7 +11,7 @@ use argon2::{
 use secrecy::{ExposeSecret, SecretString};
 
 static PASSWORD_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$").unwrap()
+    Regex::new(r"^[A-Za-z\d@$!%*#?&]{8,}$").unwrap()
 });
 
 #[derive(Clone, PartialEq, Debug)]
@@ -19,7 +19,16 @@ pub struct Password(String);
 
 impl Password {
     pub async fn new(raw: SecretString) -> Result<Self, WeakPassword> {
-        if raw.expose_secret().len() < 6 && PASSWORD_REGEX.is_match(raw.expose_secret()) {
+        let s = raw.expose_secret();
+        if s.len() < 8 {
+            return Err(WeakPassword);
+        }
+        if !PASSWORD_REGEX.is_match(s) {
+            return Err(WeakPassword);
+        }
+        let has_letter = s.chars().any(|c| c.is_ascii_alphabetic());
+        let has_digit = s.chars().any(|c| c.is_ascii_digit());
+        if !(has_letter && has_digit) {
             return Err(WeakPassword);
         }
 
@@ -59,10 +68,6 @@ impl Password {
         })
         .await
         .unwrap_or(false) 
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
     }
 }
 

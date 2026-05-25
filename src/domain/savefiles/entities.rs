@@ -1,7 +1,7 @@
 use uuid::Uuid;
 use getset::Getters;
 
-#[derive(Getters)]
+#[derive(Getters, Clone)]
 pub struct Savefile {
     #[getset(get = "pub")]
     id: Uuid,

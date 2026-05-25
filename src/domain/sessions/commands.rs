@@ -7,6 +7,7 @@ pub struct CreateSessionRequest {
     pub id: Uuid,
     pub account_id: Uuid,
     pub token: String,
+    pub expires_at: DateTimeWithTimeZone,
 }
 
 impl CreateSessionRequest {
@@ -14,8 +15,9 @@ impl CreateSessionRequest {
         id: Uuid,
         account_id: Uuid,
         token: String,
+        expires_at: DateTimeWithTimeZone,
     ) -> Self {
-        Self { id, account_id, token }
+        Self { id, account_id, token, expires_at }
     }
 }
 

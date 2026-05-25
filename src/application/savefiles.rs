@@ -2,6 +2,7 @@
 use crate::domain::savefiles::*;
 use async_trait::async_trait;
 use uuid::Uuid;
+use crate::domain::InternalError;
 
 pub struct Service<R: SavefilesRepository> {
     repo: R,
@@ -22,13 +23,22 @@ where R: SavefilesRepository + Send + Sync {
         self.repo.insert_savefile(cmd).await
     }
     async fn load(&self, id: Uuid) -> Result<Savefile, SavefileError> {
-        self.repo.find_by_id(id).await?
-            .ok_or(SavefileError::NotFound)
+        let savefile = if let Some(v) = self.repo.find_by_id(id).await? {
+            v
+        } else {
+            self.init(id).await?
+        };
+
+        Ok(savefile)
     }
     async fn save(&self, cmd: UpdateSavefileRequest) -> Result<Savefile, SavefileError> {
         self.repo.update_savefile(cmd).await
     }
     async fn delete(&self, id: Uuid) -> Result<(), SavefileError> {
         self.repo.delete_savefile(id).await
+    }
+
+    async fn get_the_best(&self) -> Result<Vec<Savefile>, InternalError> {
+        self.repo.get_the_best().await
     }
 }

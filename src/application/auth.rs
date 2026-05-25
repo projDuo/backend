@@ -5,6 +5,7 @@ use crate::domain::sessions::*;
 use async_trait::async_trait;
 use secrecy::ExposeSecret;
 use secrecy::SecretString;
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct Service<A, S, T>
@@ -13,7 +14,7 @@ where
     S: SessionsRepository,
     T: TokenProvider,
 {
-    accounts_service: A,
+    accounts_service: Arc<A>,
     sessions_repo: S,
     token_provider: T,
 }
@@ -25,7 +26,7 @@ where
     T: TokenProvider,
 {
     pub fn new(
-        accounts_service: A,
+        accounts_service: Arc<A>,
         sessions_repo: S,
         token_provider: T,
     ) -> Self {
@@ -50,6 +51,7 @@ where
             session_id,
             account.id,
             jwt.refresh_token.to_string(),
+            ExpiresAt::new(self.token_provider.refresh_expires_after()).into(),
         );
         self.sessions_repo.insert_session(create_session_req).await?;
     

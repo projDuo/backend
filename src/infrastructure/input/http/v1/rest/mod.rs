@@ -1,0 +1,40 @@
+pub mod auth;
+pub mod rooms;
+pub mod accounts;
+pub mod errors;
+pub mod sessions;
+pub mod savefiles;
+//pub mod chat;
+pub mod games;
+pub mod activities;
+
+// src/http/v1/mod.rs
+use poem::{EndpointExt, Route, get};
+use std::sync::Arc;
+use crate::domain::auth::AuthService;
+use crate::domain::sessions::SessionsRepository;
+// pub mod payloads; // If you moved them here!
+
+use auth::middleware::AuthMiddleware;
+
+pub fn routes(
+    auth_service: Arc<dyn AuthService + Send + Sync>,
+    sessions_repo: Arc<dyn SessionsRepository + Send + Sync>
+) -> Route {
+    let auth_middleware = AuthMiddleware::new(auth_service, sessions_repo);
+    Route::new()
+        .at("/hello_world", get(hello_world))
+        .nest("/auth", auth::routes())
+        .nest("/accounts", accounts::routes())
+        .nest("/savefiles", savefiles::routes())
+        .nest("/rooms", rooms::routes().with(&auth_middleware))
+        .nest("/games", games::routes().with(&auth_middleware))
+        //.at("/rooms/:id/chat", post(chat::send_message).with(&auth_middleware))
+        //.at("/rooms/:id/chat/report", post(chat::report_player).with(&auth_middleware))
+        //.at("/chat/mute", post(chat::mute_player).with(&auth_middleware))
+}
+
+#[poem::handler]
+async fn hello_world() -> &'static str {
+    "Hello from v1!"
+}

@@ -3,6 +3,7 @@ use crate::domain::accounts::*;
 use async_trait::async_trait;
 use secrecy::SecretString;
 use uuid::Uuid;
+use crate::domain::InternalError;
 
 #[derive(Clone)]
 pub struct Service<R: AccountsRepository> {
@@ -19,15 +20,17 @@ where R: AccountsRepository {
 #[async_trait]
 impl<R> AccountsService for Service<R>
 where R: AccountsRepository + Send + Sync {
-    async fn read_account(&self, id: Uuid) -> Result<Option<Account>, InternalError> {
-        self.repo.find_by_id(id).await
+    async fn read_account(&self, id: Uuid) -> Result<Account, AccountError> {
+        self.repo.find_by_id(id).await?
+            .ok_or(AccountError::NotFound)
     }
 
-    async fn read_account_by_login(&self, login: String) -> Result<Option<Account>, InternalError> {
-        self.repo.find_by_login(login).await
+    async fn read_account_by_login(&self, login: String) -> Result<Account, AccountError> {
+        self.repo.find_by_login(login).await?
+            .ok_or(AccountError::NotFound)
     }
 
-    async fn read_account_by_id_or_login(&self, id: &str) -> Result<Option<Account>, InternalError> {
+    async fn read_account_by_id_or_login(&self, id: &str) -> Result<Account, AccountError> {
         if let Ok(v) = uuid::Uuid::try_parse(id) {
             self.read_account(v).await
         } else {
