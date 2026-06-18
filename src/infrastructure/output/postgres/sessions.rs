@@ -71,7 +71,6 @@ impl SessionsRepository for super::Postgres {
 
     async fn insert_session(&self, cmd: CreateSessionRequest) -> Result<Session, SessionError> {
         let active_model = ActiveModel {
-            id: Set(cmd.id),
             account_id: Set(cmd.account_id),
             token: Set(cmd.token),
             expires_at: Set(cmd.expires_at),
@@ -101,6 +100,10 @@ impl SessionsRepository for super::Postgres {
 
         if let Some(v) = cmd.is_revoked {
             active_model.set(Column::IsRevoked, v.into());
+        }
+
+        if let Some(v) = cmd.token {
+            active_model.set(Column::Token, v.into());
         }
 
         let model = Entity::update(active_model).exec(&self.db).await?;

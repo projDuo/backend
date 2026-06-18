@@ -6,7 +6,7 @@ impl Room {
     pub fn new(
         id: RoomId,
         name: Name,
-        is_public: IsPublic,
+        is_public: bool,
         password: Option<PasswordHash>,
         owner: Uuid,
         max_players: MaxPlayers,

@@ -40,10 +40,6 @@ impl GameEventBus for EventBus {
         let Some(channel) = self.channels.get(&player_id) else { return () };
         let _ = channel.send(event);
     }
-    async fn game_started(&self, player_id: Uuid, game: GameQuery) {
-        tracing::info!("whywhywhy {} {:?}", player_id, game);
-        self.publish(player_id, GameEvents::GameStarted(game));
-    }
     async fn game_new_turn(&self, player_id: Uuid, game: GameNewTurnQuery) {
         self.publish(player_id, GameEvents::GameNewTurn(game));
     }

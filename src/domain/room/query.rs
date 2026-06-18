@@ -40,7 +40,7 @@ impl From<Room> for RoomPublic {
         Self {
             id: value.id.get().to_string(),
             name: value.name.get().to_string(),
-            is_public: *value.is_public.get(),
+            is_public: value.is_public,
             password: value.password.is_some(),
             owner: value.owner,
             max_players: value.max_players.get()
@@ -51,11 +51,10 @@ impl From<Room> for RoomPublic {
 #[derive(Debug, Clone)]
 pub struct PlayerBody {
     pub is_ready: bool, 
-    pub points: u64, 
 }
 impl From<Player> for PlayerBody {
     fn from(value: Player) -> Self {
-        Self { is_ready: value.is_ready, points: value.points }
+        Self { is_ready: value.is_ready }
     }
 }
 

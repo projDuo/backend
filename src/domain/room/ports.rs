@@ -13,7 +13,7 @@ use super::InternalError;
 #[async_trait]
 pub trait RoomRepository {
     async fn find_room_by_id(&self, id: String) -> Option<Room>;
-    async fn read_room_list(&self, limit: usize, after: usize) -> Result<Vec<RoomListItem>, InternalError>;
+    async fn read_room_list(&self, limit: usize, after: usize, search: Option<String>) -> Result<Vec<RoomListItem>, InternalError>;
     async fn create_room(&self, cmd: CreateRoomRequest) -> Result<Room, RoomError>;
     async fn update_room(&self, cmd: UpdateRoomRequest) -> Result<Room, RoomError>;
     async fn delete_room(&self, id: String) -> Result<(), RoomError>;
@@ -36,8 +36,9 @@ pub trait PlayerRepository {
 #[async_trait]
 pub trait RoomService {
     async fn read_room(&self, id: String) -> Result<RoomWithPlayersEmbedded, RoomError>;
-    async fn read_room_list(&self, limit: usize, after: usize) -> Result<Vec<RoomListItem>, InternalError>;
+    async fn read_room_list(&self, limit: usize, after: usize, search: Option<String>) -> Result<Vec<RoomListItem>, InternalError>;
     async fn read_player_by_id(&self, player_id: Uuid) -> Result<Player, RoomError>;
+    async fn kick_room_player(&self, initiator_id: Uuid, room_id: String, player_id: Uuid) -> Result<(), RoomError>;
     async fn add_room_player(&self, player_id: Uuid, room_id: String, password: Option<String>) -> Result<Player, RoomError>;
     async fn update_room_player(&self, cmd: UpdatePlayerRequest) -> Result<Player, RoomError>;
     async fn remove_room_player(&self, player_id: Uuid) -> Result<(), RoomError>;

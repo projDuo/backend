@@ -16,7 +16,7 @@ pub struct Savefile {
     #[getset(get = "pub")]
     pub loses: u32,
     #[getset(get = "pub")]
-    pub max_points: u16,
+    pub max_points: u64,
 }
 
 impl Savefile {
@@ -27,7 +27,7 @@ impl Savefile {
         cards_had: u64,
         wins: u32,
         loses: u32,
-        max_points: u16,
+        max_points: u64,
     ) -> Self {
         Self {
             id,

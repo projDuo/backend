@@ -9,7 +9,6 @@ pub mod output;
 #[serde(tag = "event", content = "data")]
 #[convert(from(GameEvents))]
 pub enum GameEventOut {
-    GameStarted(output::GameQuery), //Подія створення нової гри
     GameNewTurn(output::GameNewTurnQuery), //Подія нового ходу гри
     GameOver(output::GameOverQuery), //Подія закінчення гри
 }

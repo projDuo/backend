@@ -1,0 +1,92 @@
+.game-over-container {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 500px;
+  margin-top: 20px;
+}
+
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  border-radius: 10px;
+  background: var(--bg-pane-light);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.leaderboard-rank {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--highlight);
+  margin-right: 0;
+  min-width: 44px;
+  flex-shrink: 0;
+}
+
+.leaderboard-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.leaderboard-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.leaderboard-stats {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.leaderboard-points {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--game-success);
+  flex-shrink: 0;
+  margin-left: 8px;
+  padding-left: 4px;
+}
+
+.leaderboard-back-btn {
+  justify-content: center;
+  width: 100%;
+  max-width: 500px;
+  align-self: center;
+  margin-top: 18px;
+  padding: 18px 22px;
+  font-size: 1rem;
+  font-weight: 700;
+  background: var(--bg-pane-light);
+  border-color: var(--border-color);
+  color: var(--text-main);
+}
+
+.leaderboard-back-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.leaderboard-back-btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 2px;
+}
+
+.leaderboard-me {
+  border-color: var(--highlight);
+  background: rgba(255, 204, 0, 0.1);
+}

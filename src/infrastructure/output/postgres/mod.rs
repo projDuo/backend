@@ -3,7 +3,9 @@ pub mod custom;
 pub mod accounts;
 pub mod savefiles;
 pub mod sessions;
-pub mod roles;
+pub mod game_history;
+pub mod chat;
+pub mod muted;
 
 use sea_orm::{Database, DatabaseConnection, DbErr};
 

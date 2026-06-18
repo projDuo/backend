@@ -32,11 +32,24 @@ impl RoomRepository for RoomStorage {
         let storage = self.rooms.read().await;
         storage.get(&id).map(Clone::clone)
     }
-    async fn read_room_list(&self, limit: usize, after: usize) -> Result<Vec<RoomListItem>, InternalError> {
+    async fn read_room_list(&self, limit: usize, after: usize, search: Option<String>) -> Result<Vec<RoomListItem>, InternalError> {
         let storage = self.rooms.read().await;
+        let search_term = search
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_lowercase);
+
         let rooms: Vec<Room> = storage
             .values()
-            .filter(|v| *v.is_public.get())
+            .filter(|v| v.is_public)
+            .filter(|room| {
+                if let Some(ref term) = search_term {
+                    room.name.get().to_lowercase().contains(term)
+                } else {
+                    true
+                }
+            })
             .skip(after)
             .take(limit)
             .cloned()
@@ -71,7 +84,7 @@ impl RoomRepository for RoomStorage {
                 RoomListItem::new(
                     room.id.get().to_string(),
                     room.name.get().to_string(),
-                    *room.is_public.get(),
+                    room.is_public,
                     room.password.is_some(),
                     accounts.pop().expect("Room and owner id vectors size mismatch"),
                     room.max_players.get(),
@@ -86,7 +99,7 @@ impl RoomRepository for RoomStorage {
         let mut storage = self.rooms.write().await;
 
         let name = cmd.name.unwrap_or_default();
-        let is_public: IsPublic = cmd.is_public.unwrap_or_default();
+        let is_public: bool = cmd.is_public.unwrap_or_default();
         let password = cmd.password.unwrap_or_default();
         let max_players = cmd.max_players.unwrap_or_default();
         let res = loop {
@@ -174,7 +187,7 @@ impl PlayerRepository for RoomStorage {
             }
         }
         
-        let player = Player::new(cmd.id, cmd.room_id.to_string(), cmd.is_ready, cmd.points);
+        let player = Player::new(cmd.id, cmd.room_id.to_string(), cmd.is_ready);
         self.occupancy.entry(cmd.room_id.to_string()).or_default().insert(cmd.id);
         //If player was already in a room their data will be replaced
         self.players.insert(cmd.id, player.clone());
@@ -188,9 +201,7 @@ impl PlayerRepository for RoomStorage {
         if let Some(v) = cmd.is_ready {
             player.is_ready = v;
         }
-        if let Some(v) = cmd.points {
-            player.points = v;
-        }
+
         Ok(player.clone())
     }
     async fn remove_room_player(&self, player_id: Uuid) -> Result<(), RoomError> {

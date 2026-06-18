@@ -12,7 +12,7 @@ pub struct SavefilePublic {
     pub cards_had: u64,
     pub wins: u32,
     pub loses: u32,
-    pub max_points: u16,
+    pub max_points: u64,
 }
 
 impl From<Savefile> for SavefilePublic {

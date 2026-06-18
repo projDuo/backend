@@ -18,15 +18,11 @@ pub mod password;
 pub struct MaxPlayers(u8); 
 pub mod max_players;
 
-#[derive(Debug, Copy, Clone)]
-pub struct IsPublic(pub bool); 
-pub mod is_public;
-
 #[derive(Debug, Clone)]
 pub struct Room { //Структура, що описує кімнату
     pub id: RoomId, //Ідентифікатор
     pub name: Name, //Назва
-    pub is_public: IsPublic, //Видимість в списку кімнат
+    pub is_public: bool, //Видимість в списку кімнат
     pub password: Option<PasswordHash>, //Пароль
     pub owner: Uuid, //Власник
     pub max_players: MaxPlayers, //Максимальна кількість гравців
@@ -42,6 +38,5 @@ pub struct Player { //Структура, що описує гравця у кі
     #[getset(get = "pub")]
     room_id: String, //Room
     pub is_ready: bool, //Готовність
-    pub points: u64, //Очки
 }
 pub mod player;

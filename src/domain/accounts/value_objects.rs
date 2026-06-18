@@ -10,25 +10,33 @@ use argon2::{
 };
 use secrecy::{ExposeSecret, SecretString};
 
-static PASSWORD_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^[A-Za-z\d@$!%*#?&]{8,}$").unwrap()
-});
-
 #[derive(Clone, PartialEq, Debug)]
 pub struct Password(String);
 
 impl Password {
     pub async fn new(raw: SecretString) -> Result<Self, WeakPassword> {
         let s = raw.expose_secret();
-        if s.len() < 8 {
+        if s.len() < 8 || s.len() > 16 {
             return Err(WeakPassword);
         }
-        if !PASSWORD_REGEX.is_match(s) {
-            return Err(WeakPassword);
+
+        let mut has_special = false;
+        let mut has_letter = false;
+        let mut has_digit = false;
+
+        for c in s.chars() {
+            if c.is_ascii_alphabetic() {
+                has_letter = true;
+            } else if c.is_ascii_digit() {
+                has_digit = true;
+            } else if "@$!%*#?&".contains(c) {
+                has_special = true;
+            } else {
+                return Err(WeakPassword);
+            }
         }
-        let has_letter = s.chars().any(|c| c.is_ascii_alphabetic());
-        let has_digit = s.chars().any(|c| c.is_ascii_digit());
-        if !(has_letter && has_digit) {
+
+        if !(has_letter && has_digit && has_special) {
             return Err(WeakPassword);
         }
 
@@ -111,7 +119,14 @@ impl ToString for Login {
 pub struct DisplayName(String);
 
 impl DisplayName {
-    pub fn new(name: String) -> Self {
+    pub fn new(name: String) -> Result<Self, InvalidDisplayName> {
+        if name.is_empty() || name.len() > 32 {
+            return Err(InvalidDisplayName);
+        }
+        Ok(Self(name))
+    }
+
+    pub fn from_raw(name: String) -> Self {
         Self(name)
     }
 }

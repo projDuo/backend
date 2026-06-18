@@ -70,6 +70,31 @@ impl From<entities::PlayerResult> for PlayerResult {
     }
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct GameHistoryPublic {
+    pub id: Uuid,
+    pub game_id: Uuid,
+    pub placement: u32,
+    pub points: u64,
+    pub cards_had: u64,
+    pub participants: Vec<Uuid>,
+    pub finished_at: i64,
+}
+
+impl From<crate::domain::game_history::GameHistory> for GameHistoryPublic {
+    fn from(value: crate::domain::game_history::GameHistory) -> Self {
+        Self {
+            id: value.id,
+            game_id: value.game_id,
+            placement: value.placement,
+            points: value.points,
+            cards_had: value.cards_had,
+            participants: value.participants,
+            finished_at: value.finished_at.timestamp_millis(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, StructuralConvert)]
 #[convert(from(query::GameQuery))]
 pub struct GameQuery {
@@ -77,6 +102,7 @@ pub struct GameQuery {
     pub card: Card,
     pub history: Vec<Turn>,
     pub turn: usize,
+    pub turn_enforced_at: i64,
     pub direction: Direction,
     pub players: Vec<Uuid>,
     pub players_active: Vec<PlayerPrivateQuery>,
@@ -90,6 +116,7 @@ pub struct GameNewTurnQuery {
     pub id: Uuid,
     pub card: Card,
     pub turn: usize,
+    pub turn_enforced_at: i64,
     pub direction: Direction,
     pub players_active: Vec<PlayerPrivateQuery>,
     pub leaderboard: Vec<PlayerResult>,

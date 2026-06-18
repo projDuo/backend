@@ -196,3 +196,82 @@ impl ActivityService for Service {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::activity::events::ActivityEvent;
+    use async_trait::async_trait;
+    use std::sync::Arc;
+    use tokio::sync::broadcast;
+    use uuid::Uuid;
+
+    struct DummyActivityEventBus;
+    #[async_trait]
+    impl ActivityEventBus for DummyActivityEventBus {
+        fn new_channel(&self, _user_id: Uuid) {}
+        fn close_channel(&self, _user_id: Uuid) {}
+        fn subscribe(&self, _user_id: Uuid) -> Option<broadcast::Receiver<ActivityEvent>> { None }
+        fn publish(&self, _user_id: Uuid, _event: ActivityEvent) {}
+        async fn joined_room(&self, _room_id: String, _user_id: Uuid) {}
+        async fn left_room(&self, _user_id: Uuid) {}
+        async fn joined_game(&self, _game_id: Uuid, _user_id: Uuid) {}
+        async fn left_game(&self, _user_id: Uuid) {}
+    }
+
+    struct DummyRoomInternalEventBus;
+    #[async_trait]
+    impl RoomInternalEventBus for DummyRoomInternalEventBus {
+        async fn remove_room_player(&self, _player_id: Uuid) {}
+    }
+
+    struct DummyGameInternalEventBus;
+    #[async_trait]
+    impl GameInternalEventBus for DummyGameInternalEventBus {
+        async fn request_new_game_session(&self, _player_ids: Vec<Uuid>) {}
+        async fn remove_player(&self, _game_id: Uuid, _player_id: Uuid) {}
+    }
+
+    struct DummyEventBus<T: Clone + Send + Sync + 'static> {
+        sender: broadcast::Sender<T>,
+    }
+
+    impl<T: Clone + Send + Sync + 'static> DummyEventBus<T> {
+        fn new() -> Self {
+            let (sender, _) = broadcast::channel(1);
+            Self { sender }
+        }
+    }
+
+    impl<T: Clone + Send + Sync + 'static> EventBus<T> for DummyEventBus<T> {
+        fn subscribe(&self) -> broadcast::Receiver<T> {
+            self.sender.subscribe()
+        }
+
+        fn publish(&self, event: T) {
+            let _ = self.sender.send(event);
+        }
+    }
+
+    #[tokio::test]
+    async fn mark_read_delete_activity() {
+        let event_bus = Arc::new(DummyActivityEventBus);
+        let rooms = Arc::new(DummyRoomInternalEventBus);
+        let games = Arc::new(DummyGameInternalEventBus);
+        let internal_event_bus = Arc::new(DummyEventBus::<ActivityInternalEvent>::new());
+        let service = Service::new(60, rooms, games, event_bus, internal_event_bus);
+
+        let user_id = Uuid::now_v7();
+        let mut cmd = MarkActivityCommand::new(user_id);
+        cmd.room(Some("room-1".to_string()));
+
+        let activity = service.mark_activity(cmd).await.expect("mark activity");
+        assert_eq!(activity.room, Some("room-1".to_string()));
+
+        let read = service.read_activity(user_id).await.expect("read activity");
+        assert_eq!(read.room, Some("room-1".to_string()));
+
+        service.delete_activity(user_id).await.expect("delete activity");
+        assert!(service.read_activity(user_id).await.is_err());
+    }
+}

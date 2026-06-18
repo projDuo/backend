@@ -3,6 +3,7 @@ pub mod account;
 pub mod game;
 pub mod auth;
 pub mod activity;
+pub mod chat;
 
 use serde::{Serialize, Deserialize};
 use derive_more::From;
@@ -23,6 +24,7 @@ pub enum EventOut {
     Room(room::RoomEventOut),
     Game(game::GameEventOut),
     Activity(activity::ActivityEventOut),
+    Chat(chat::ChatEventOut),
 }
 impl EventOut {
     pub fn to_json_string(&self) -> String { //серіалізація у рядок

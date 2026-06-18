@@ -4,4 +4,3 @@ Secrets*.toml
 /src/database/old
 /src/client
 *.env
-/client

@@ -14,4 +14,5 @@ pub fn routes() -> Route {
         .at("/:id/join", post(routes::join))
         .at("/:id/ready", post(routes::ready))
         .at("/:id/leave", post(routes::leave))
+        .at("/:id/kick/:player_id", post(routes::kick))
 }

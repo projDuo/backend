@@ -12,7 +12,7 @@ pub struct Model {
     pub cards_had: i64,
     pub wins: i32,
     pub loses: i32,
-    pub max_points: i16,
+    pub max_points: i64,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

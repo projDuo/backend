@@ -16,6 +16,12 @@ pub async fn login(req: Json<Login>, state: Data<&Arc<AppState>>) -> Result<Json
 }
 
 #[handler]
+pub async fn refresh(req: Json<Refresh>, state: Data<&Arc<AppState>>) -> Result<Json<TokenPairPayload>, AuthError> {
+    let pair = state.auth.refresh(req.refresh_token.clone().into()).await?;
+    Ok(Json(pair.into()))
+}
+
+#[handler]
 pub async fn logout(state: Data<&Arc<AppState>>, user: Data<&AuthenticatedUser>) -> Result<StatusCode, AuthError> {
     let _ = state.auth.revoke(user.clone().into()).await?;
     Ok(StatusCode::OK)

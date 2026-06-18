@@ -9,7 +9,7 @@ use super::custom;
 impl From<Model> for Account {
     fn from(value: Model) -> Self {
         let display_name = value.display_name.map(|v| {
-                    DisplayName::new(v)
+                    DisplayName::from_raw(v)
         });
         Self::new(value.id, Login::from_raw(value.login), Password::from_hash(value.password), display_name, value.created_at)
     }

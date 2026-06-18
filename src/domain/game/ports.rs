@@ -24,7 +24,6 @@ pub trait GameEventBus {
     fn close_channel(&self, player_id: Uuid);
     fn subscribe(&self, player_id: Uuid) -> Option<broadcast::Receiver<GameEvents>>;
     fn publish(&self, player_id: Uuid, event: GameEvents);
-    async fn game_started(&self, player_id: Uuid, game: GameQuery);
     async fn game_new_turn(&self, player_id: Uuid, game: GameNewTurnQuery);
     async fn game_over(&self, player_id: Uuid, game: GameOverQuery);
 }

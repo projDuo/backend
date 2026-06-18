@@ -6,13 +6,17 @@ impl Game {
         id: Uuid,
         history: Vec<Turn>,
         turn: usize,
+        turn_enforced_at: i64,
+        turn_timeout_secs: u64,
         direction: Direction,
         players: Vec<Uuid>,
     ) -> Self {
-        Self { id, history, turn, direction, players }
+        Self { id, history, turn, turn_enforced_at, turn_timeout_secs, direction, players }
     }
 
-    pub fn init(players: Vec<Uuid>) -> Self {
+    pub fn init(players: Vec<Uuid>, turn_timeout_secs: u64) -> Self {
+        let now = chrono::Utc::now().timestamp_millis();
+        let turn_enforced_at = now + (turn_timeout_secs as i64 * 1000);
         Self { 
             id: Uuid::now_v7(),
             history: vec!(
@@ -22,6 +26,8 @@ impl Game {
                 )
             ), 
             turn: 0,
+            turn_enforced_at,
+            turn_timeout_secs,
             direction: Direction::Next,
             players
         }

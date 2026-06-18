@@ -1,6 +1,7 @@
 pub mod room;
 pub mod activity;
 pub mod game;
+pub mod chat;
 
 #[macro_export]
 macro_rules! impl_tokio_event_bus {

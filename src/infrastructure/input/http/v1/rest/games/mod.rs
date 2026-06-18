@@ -8,6 +8,7 @@ use poem::{Route, get, post};
 
 pub fn routes() -> Route {
     Route::new()
+        .at("/history", get(routes::history))
         .at("/:id", get(routes::get))
         .at("/:id/play", post(routes::play))
         .at("/:id/play/:card_id", post(routes::play))

@@ -52,6 +52,8 @@ pub struct Game { //Структура, що описує гру
     id: Uuid,
     pub(crate) history: Vec<Turn>, //Попередня зіграна карта
     pub(crate) turn: usize, //індекс гравця, що ходить
+    pub(crate) turn_enforced_at: i64, //unix timestamp ms when turn is auto-forced
+    pub(crate) turn_timeout_secs: u64, //max seconds allowed for a turn
     pub(crate) direction: Direction, //напрямок ходів
     #[getset(get = "pub")]
     players: Vec<Uuid>

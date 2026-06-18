@@ -1,0 +1,65 @@
+#nameAndIdRoom {
+  position: relative;
+}
+
+.room-header__leave {
+  position: absolute;
+  top: 8px;
+  right: 0;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--game-error);
+  background: var(--game-error);
+  color: #111;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: 700;
+  min-width: max-content;
+}
+
+.room-header__leave:hover {
+  filter: brightness(0.95);
+}
+
+.room-header__settings {
+  position: absolute;
+  top: 8px;
+  right: 60px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-pane-light);
+  color: var(--text-main);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: 700;
+  min-width: max-content;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.room-header__settings:hover {
+  border-color: var(--highlight);
+  background: rgba(255, 204, 0, 0.1);
+}
+
+#buttonBlock input[type="button"] {
+  margin-right: 10px;
+  margin-top: 8px;
+  background: var(--bg-pane-light);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+#buttonBlock input[type="button"]:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.35);
+}

@@ -1,11 +1,13 @@
 use poem::{
     handler, http::StatusCode, web::{
         Data, Json, Path
-    }, Result
+    }, Error, Result
 };
 use std::sync::Arc;
-use crate::{AppState, domain::{accounts::{AccountError, CreateAccountRequest, Login, Password}}};
+use uuid::Uuid;
+use crate::{AppState, domain::{accounts::{AccountError, CreateAccountRequest, Login, Password, DisplayName, UpdateAccountRequest}}};
 use super::payloads::*;
+use super::super::auth::middleware::AuthenticatedUser;
 
 use crate::domain::accounts::ports::AccountsService;
 
@@ -42,5 +44,45 @@ pub async fn register(req: Json<Register>, state: Data<&Arc<AppState>>) -> Resul
     };
     
     let res = state.as_ref().accounts.register(cmd).await?;
+    Ok(Json(res.into()))
+}
+
+#[handler]
+pub async fn update(
+    Path(id): Path<String>,
+    req: Json<UpdateAccount>,
+    user: Data<&AuthenticatedUser>,
+    state: Data<&Arc<AppState>>,
+) -> Result<Json<AccountReadPublic>> {
+    let account_id = Uuid::try_parse(&id)
+        .map_err(|_| Error::from_string("Invalid account id", StatusCode::BAD_REQUEST))?;
+
+    if account_id != user.account_id {
+        return Err(Error::from_string("Forbidden", StatusCode::FORBIDDEN));
+    }
+
+    let login = match req.login.clone() {
+        Some(value) => Some(Login::new(value)?),
+        None => None,
+    };
+
+    let password = match req.password.clone() {
+        Some(value) => Some(Password::new(value.into()).await?),
+        None => None,
+    };
+
+    let display_name = match req.display_name.clone() {
+        Some(value) => Some(DisplayName::new(value)?),
+        None => None,
+    };
+
+    let cmd = UpdateAccountRequest {
+        id: account_id,
+        login,
+        password,
+        display_name,
+    };
+
+    let res = state.as_ref().accounts.update_account(cmd).await?;
     Ok(Json(res.into()))
 }

@@ -4,8 +4,8 @@ use std::hash::Hash;
 use super::Player;
 
 impl Player {
-    pub fn new(id: Uuid, room_id: String, is_ready: bool, points: u64) -> Self {
-        Self { id, room_id, is_ready, points }
+    pub fn new(id: Uuid, room_id: String, is_ready: bool) -> Self {
+        Self { id, room_id, is_ready }
     }
 }
 

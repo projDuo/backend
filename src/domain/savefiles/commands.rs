@@ -19,7 +19,7 @@ pub struct UpdateSavefileRequest {
     pub cards_had: Option<u64>,
     pub wins: Option<u32>,
     pub loses: Option<u32>,
-    pub max_points: Option<u16>,
+    pub max_points: Option<u64>,
 }
 
 impl From<Savefile> for UpdateSavefileRequest {

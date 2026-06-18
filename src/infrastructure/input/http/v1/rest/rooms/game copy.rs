@@ -76,7 +76,7 @@ pub async fn play(
                 }
                 savefile.cards_had += *player.cards_had() as u64; //збільшення кількості карт які гравець тримав загалом
                 savefile.points += *player.points(); //збільшення кількості очків
-                savefile.max_points = savefile.max_points.max(*player.points() as u16); //порівняння значення найбільшої кількості очок за гру та їх назначення
+                savefile.max_points = savefile.max_points.max(*player.points() as u64); //порівняння значення найбільшої кількості очок за гру та їх назначення
             
                 state.savefiles.save(savefile.into()).await;
             }

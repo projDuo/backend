@@ -4,7 +4,8 @@ pub mod accounts;
 pub mod errors;
 pub mod sessions;
 pub mod savefiles;
-//pub mod chat;
+pub mod chat;
+pub mod muted;
 pub mod games;
 pub mod activities;
 
@@ -24,14 +25,13 @@ pub fn routes(
     let auth_middleware = AuthMiddleware::new(auth_service, sessions_repo);
     Route::new()
         .at("/hello_world", get(hello_world))
-        .nest("/auth", auth::routes())
-        .nest("/accounts", accounts::routes())
+        .nest("/auth", auth::routes(&auth_middleware))
+        .nest("/accounts", accounts::routes(&auth_middleware))
         .nest("/savefiles", savefiles::routes())
         .nest("/rooms", rooms::routes().with(&auth_middleware))
         .nest("/games", games::routes().with(&auth_middleware))
-        //.at("/rooms/:id/chat", post(chat::send_message).with(&auth_middleware))
-        //.at("/rooms/:id/chat/report", post(chat::report_player).with(&auth_middleware))
-        //.at("/chat/mute", post(chat::mute_player).with(&auth_middleware))
+        .nest("/chat", chat::routes().with(&auth_middleware))
+        .nest("/muted", muted::routes().with(&auth_middleware))
 }
 
 #[poem::handler]

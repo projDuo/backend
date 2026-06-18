@@ -34,3 +34,10 @@ pub struct Register { //структура, яка задає які поля з
     pub login: String, //логін
     pub password: String, //пароль
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateAccount {
+    pub login: Option<String>,
+    pub password: Option<String>,
+    pub display_name: Option<String>,
+}

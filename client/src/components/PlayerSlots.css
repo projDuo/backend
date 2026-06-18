@@ -1,0 +1,88 @@
+#roomLobbyTitle {
+  margin: 0 0 1rem;
+}
+
+.room-players-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px;
+  background-color: var(--bg-pane-heavy);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 20px;
+}
+
+.room-player-slot {
+  flex: 1;
+  flex-grow: 0;
+  min-width: 120px;
+  min-height: 160px;
+  border-radius: 14px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  gap: 10px;
+  text-align: center;
+}
+
+.room-player-slot__info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.room-player-slot--filled {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+}
+
+.room-player-slot--owner {
+  border: 1px solid var(--highlight);
+}
+
+.room-player-slot--empty {
+  background: var(--btn-bg);
+  border: 1px dashed var(--border-color);
+  color: var(--text-muted);
+}
+
+.room-player-slot__name {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.room-player-slot__ready {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.room-player-slot__kick {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 3px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--game-error);
+  background: var(--game-error);
+  color: #111;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: 700;
+  width: auto;
+  min-width: max-content;
+}
+
+.room-player-slot__kick:hover {
+  filter: brightness(0.95);
+}

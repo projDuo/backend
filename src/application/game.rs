@@ -1,10 +1,11 @@
-use std::{sync::Arc, vec};
+use std::{sync::Arc, time::Duration, vec};
 
 use std::collections::hash_map::HashMap;
 use indexmap::IndexSet;
 use uuid::Uuid;
 use dashmap::DashMap;
 use crate::domain::activity::ActivityInternalEventBus;
+use crate::domain::game_history::{GameHistory, GameHistoryService};
 use crate::domain::savefiles::{SavefilesService, UpdateSavefileRequest};
 use crate::domain::{EventBus, game::*};
 use async_trait::async_trait;
@@ -16,17 +17,22 @@ pub struct Service {
     players: DashMap<Uuid, Player>,
     ingame: DashMap<Uuid, IndexSet<Uuid>>,
     leaderboard: DashMap<Uuid, IndexSet<PlayerResult>>,
+    internal_event_bus: Arc<dyn EventBus<GameInternalEvents> + Send + Sync>,
     event_bus: Arc<dyn GameEventBus + Sync + Send>,
     savefiles: Arc<dyn SavefilesService + Send + Sync>,
+    game_history: Arc<dyn GameHistoryService + Send + Sync>,
     activity_ievent_bus: Arc<dyn ActivityInternalEventBus + Sync + Send>,
     _shutdown_tx: broadcast::Sender<()>,
 }
+
+const DEFAULT_TURN_TIMEOUT_SECS: u64 = 15;
 
 impl Service {
     pub fn new(
         event_bus: Arc<dyn GameEventBus + Sync + Send>,
         internal_event_bus: Arc<dyn EventBus<GameInternalEvents> + Send + Sync + 'static>,
         savefiles: Arc<dyn SavefilesService + Send + Sync>,
+        game_history: Arc<dyn GameHistoryService + Send + Sync>,
         activity_ievent_bus: Arc<dyn ActivityInternalEventBus + Sync + Send>,
     ) -> Arc<Self> {
         let games = DashMap::new();
@@ -41,8 +47,10 @@ impl Service {
             players,
             ingame,
             leaderboard,
+            internal_event_bus: internal_event_bus.clone(),
             event_bus,
             savefiles,
+            game_history,
             activity_ievent_bus,
             _shutdown_tx,
         });
@@ -86,7 +94,7 @@ impl Service {
         ((total_players * 10) * (total_players - placement_index) / total_players) as u64
     }
 
-    async fn persist_game_over_stats(&self, players: &[PlayerResult]) {
+    async fn persist_game_over_stats(&self, game_id: Uuid, players: &[PlayerResult], participants: &[Uuid]) {
         let total = players.len();
         for (index, player) in players.iter().enumerate() {
             let points = Self::points_for_placement(total, index);
@@ -103,7 +111,7 @@ impl Service {
                 }
                 savefile.cards_had += cards_had as u64;
                 savefile.points += points;
-                savefile.max_points = savefile.max_points.max(points as u16);
+                savefile.max_points = savefile.max_points.max(points as u64);
 
                 self.savefiles
                     .save(UpdateSavefileRequest {
@@ -127,8 +135,46 @@ impl Service {
                     e
                 );
             }
+
+            if let Err(err) = self.game_history.record_history(GameHistory::create(
+                player_id,
+                game_id,
+                (total - index) as u32,
+                points,
+                cards_had as u64,
+                participants.to_vec(),
+            )).await {
+                tracing::error!(
+                    "Failed to persist game history after game over for {}: {}",
+                    player_id,
+                    err
+                );
+            }
         }
     }
+
+    fn schedule_turn_timeout(&self, game: &Game) {
+        let game_id = *game.id();
+        let turn = game.turn;
+        let turn_enforced_at = game.turn_enforced_at;
+
+        let Some(ingame) = self.ingame.get(&game_id) else { return; };
+        let Some(player_id) = ingame.get_index(turn).copied() else { return; };
+
+        let event_bus = self.internal_event_bus.clone();
+        tokio::spawn(async move {
+            let now = chrono::Utc::now().timestamp_millis();
+            let wait_ms = (turn_enforced_at - now).max(0) as u64;
+            tokio::time::sleep(Duration::from_millis(wait_ms)).await;
+            event_bus.publish(GameInternalEvents::ForceTurnIfUnchanged {
+                game_id,
+                player_id,
+                turn,
+                turn_enforced_at,
+            });
+        });
+    }
+
 }
 
 #[async_trait]
@@ -145,6 +191,24 @@ impl super::EventHandler<GameInternalEvents> for Service {
                 if let Err(e) = res {
                     tracing::error!("Failed to remove a Game player through internal event bus: {}", e);
                 }
+            },
+            GameInternalEvents::ForceTurnIfUnchanged { game_id, player_id, turn, turn_enforced_at } => {
+                let should_force = self.games.get(&game_id)
+                    .map(|game| game.turn == turn && game.turn_enforced_at == turn_enforced_at)
+                    .unwrap_or(false);
+                if !should_force {
+                    return;
+                }
+
+                let current_turn_player = self.ingame.get(&game_id)
+                    .and_then(|ingame| ingame.get_index(turn).copied());
+                if current_turn_player != Some(player_id) {
+                    return;
+                }
+
+                if let Err(e) = self.play_card(game_id, player_id, None).await {
+                    tracing::error!("Failed to force timed-out player move: {}", e);
+                }
             }
         };
     }
@@ -155,7 +219,7 @@ impl GameService for Service {
     async fn create_game_session(&self, initiator_player_id: Option<Uuid>, player_ids: Vec<Uuid>) -> Result<GameQuery, GameError> {
         if player_ids.len() < 2 { return Err(GameError::NotEnoughPlayers) }; 
 
-        let game = Game::init(player_ids.clone());
+        let game = Game::init(player_ids.clone(), DEFAULT_TURN_TIMEOUT_SECS);
         let ingame = player_ids.iter().cloned().collect();
         let mut players_query = Vec::new();
 
@@ -194,6 +258,10 @@ impl GameService for Service {
             initiator_hand
         );
 
+        if let Some(game) = self.games.get(&id) {
+            self.schedule_turn_timeout(&game);
+        }
+
         Ok(res)
     }
 
@@ -218,8 +286,6 @@ impl GameService for Service {
     }
 
     async fn play_card(&self, game_id: Uuid, player_id: Uuid, card_id: Option<usize>) -> Result<PlayCard, GameError> {
-        // Phase 1: mutate game state only — never call helpers that lock `players` while holding
-        // `players.get_mut` (DashMap will deadlock on the same shard).
         let (game, acting_player_hand) = {
             let mut game = self.games.get_mut(&game_id)
                 .ok_or(GameError::GameNotFound)?;
@@ -289,6 +355,7 @@ impl GameService for Service {
             } else {
                 game.turn = next_turn as usize;
             }
+            game.turn_enforced_at = chrono::Utc::now().timestamp_millis() + (game.turn_timeout_secs as i64 * 1000);
 
             for _ in 0..cards_to_pick {
                 let next_player_id = *ingame
@@ -307,7 +374,6 @@ impl GameService for Service {
             (game.clone(), acting_player_hand)
         };
 
-        // Phase 2: read-only queries and side effects — all DashMap guards from phase 1 are dropped.
         let mut leaderboard: Vec<PlayerResult> = self.leaderboard_mut(game_id).iter().cloned().collect();
         let hands = self.gather_hands(game.players());
         let ingame_count = self
@@ -329,7 +395,7 @@ impl GameService for Service {
 
             leaderboard = self.leaderboard_mut(game_id).iter().cloned().collect();
 
-            self.persist_game_over_stats(&leaderboard).await;
+            self.persist_game_over_stats(game_id, &leaderboard, game.players()).await;
 
             for player in game.players() {
                 let hand = hands.get(player).cloned();
@@ -369,6 +435,7 @@ impl GameService for Service {
         }
 
         let players_private_query = self.players_private_query(&game);
+        self.schedule_turn_timeout(&game);
         for player in game.players() {
             let hand = hands.get(player).cloned();
             let event_bus = self.event_bus.clone();
@@ -405,5 +472,124 @@ impl GameService for Service {
         };
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use async_trait::async_trait;
+    use std::sync::Arc;
+
+    struct DummyGameEventBus;
+    #[async_trait]
+    impl GameEventBus for DummyGameEventBus {
+        fn new_channel(&self, _player_id: Uuid) {}
+        fn close_channel(&self, _player_id: Uuid) {}
+        fn subscribe(&self, _player_id: Uuid) -> Option<broadcast::Receiver<GameEvents>> { None }
+        fn publish(&self, _player_id: Uuid, _event: GameEvents) {}
+        async fn game_new_turn(&self, _player_id: Uuid, _query: GameNewTurnQuery) {}
+        async fn game_over(&self, _player_id: Uuid, _query: GameOverQuery) {}
+    }
+
+    struct DummyEventBus;
+    impl<T: Clone + Send + Sync + 'static> EventBus<T> for DummyEventBus {
+        fn subscribe(&self) -> broadcast::Receiver<T> {
+            let (sender, _) = broadcast::channel(1);
+            sender.subscribe()
+        }
+        fn publish(&self, _event: T) {}
+    }
+
+    struct DummySavefilesService;
+    #[async_trait]
+    impl SavefilesService for DummySavefilesService {
+        async fn init(&self, user_id: Uuid) -> Result<crate::domain::savefiles::Savefile, crate::domain::savefiles::SavefileError> { 
+            Ok(crate::domain::savefiles::Savefile::new(user_id, 0, 0, 0, 0, 0, 0))
+        }
+        async fn load(&self, user_id: Uuid) -> Result<crate::domain::savefiles::Savefile, crate::domain::savefiles::SavefileError> { 
+            Ok(crate::domain::savefiles::Savefile::new(user_id, 0, 0, 0, 0, 0, 0))
+        }
+        async fn save(&self, _cmd: UpdateSavefileRequest) -> Result<crate::domain::savefiles::Savefile, crate::domain::savefiles::SavefileError> { unimplemented!() }
+        async fn delete(&self, _id: Uuid) -> Result<(), crate::domain::savefiles::SavefileError> { Ok(()) }
+        async fn get_the_best(&self) -> Result<Vec<crate::domain::savefiles::Savefile>, crate::domain::InternalError> { Ok(vec![]) }
+    }
+
+    struct DummyGameHistoryService;
+    #[async_trait]
+    impl GameHistoryService for DummyGameHistoryService {
+        async fn record_history(&self, _cmd: GameHistory) -> Result<GameHistory, crate::domain::game_history::GameHistoryError> { Ok(_cmd) }
+        async fn list_player_history(&self, _account_id: Uuid, _after: Option<Uuid>, _limit: Option<u32>) -> Result<Vec<GameHistory>, crate::domain::InternalError> { Ok(vec![]) }
+    }
+
+    struct DummyActivityInternalEventBus;
+    #[async_trait]
+    impl ActivityInternalEventBus for DummyActivityInternalEventBus {
+        async fn user_joined_room(&self, _room_id: String, _user_id: Uuid) {}
+        async fn user_left_room(&self, _user_id: Uuid) {}
+        async fn user_joined_game(&self, _game_id: Uuid, _user_id: Uuid) {}
+        async fn user_left_game(&self, _user_id: Uuid) {}
+    }
+
+    #[tokio::test]
+    async fn create_game_session_with_two_players() {
+        let event_bus = Arc::new(DummyGameEventBus);
+        let internal_event_bus = Arc::new(DummyEventBus);
+        let savefiles = Arc::new(DummySavefilesService);
+        let game_history = Arc::new(DummyGameHistoryService);
+        let activity_ievent_bus = Arc::new(DummyActivityInternalEventBus);
+
+        let service = Service::new(event_bus, internal_event_bus, savefiles, game_history, activity_ievent_bus);
+
+        let player1 = Uuid::now_v7();
+        let player2 = Uuid::now_v7();
+        let players = vec![player1, player2];
+
+        let result = service.create_game_session(Some(player1), players.clone()).await;
+        assert!(result.is_ok());
+        
+        let game_query = result.unwrap();
+        assert_eq!(game_query.players.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn create_game_fails_with_one_player() {
+        let event_bus = Arc::new(DummyGameEventBus);
+        let internal_event_bus = Arc::new(DummyEventBus);
+        let savefiles = Arc::new(DummySavefilesService);
+        let game_history = Arc::new(DummyGameHistoryService);
+        let activity_ievent_bus = Arc::new(DummyActivityInternalEventBus);
+
+        let service = Service::new(event_bus, internal_event_bus, savefiles, game_history, activity_ievent_bus);
+
+        let player1 = Uuid::now_v7();
+        let players = vec![player1];
+
+        let result = service.create_game_session(Some(player1), players).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn remove_player_from_game() {
+        let event_bus = Arc::new(DummyGameEventBus);
+        let internal_event_bus = Arc::new(DummyEventBus);
+        let savefiles = Arc::new(DummySavefilesService);
+        let game_history = Arc::new(DummyGameHistoryService);
+        let activity_ievent_bus = Arc::new(DummyActivityInternalEventBus);
+
+        let service = Service::new(event_bus, internal_event_bus, savefiles, game_history, activity_ievent_bus);
+
+        let player1 = Uuid::now_v7();
+        let player2 = Uuid::now_v7();
+        let players = vec![player1, player2];
+
+        let game = service.create_game_session(Some(player1), players).await.expect("create game");
+        let game_id = game.id;
+
+        let result1 = service.remove_player(game_id, player1).await;
+        assert!(result1.is_ok());
+
+        let result2 = service.remove_player(game_id, Uuid::now_v7()).await;
+        assert!(result2.is_err());
     }
 }

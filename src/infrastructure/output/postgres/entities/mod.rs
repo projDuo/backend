@@ -3,7 +3,8 @@
 pub mod prelude;
 
 pub mod accounts;
-pub mod roles;
-pub mod roles_assigned;
 pub mod savefiles;
 pub mod sessions;
+pub mod game_histories;
+pub mod chat_messages;
+pub mod muted;

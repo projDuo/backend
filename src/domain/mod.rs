@@ -1,12 +1,13 @@
-//pub mod game;
 pub mod accounts;
 pub mod savefiles;
 pub mod sessions;
 pub mod auth;
 pub mod game;
+pub mod game_history;
 pub mod room;
-pub mod roles;
 pub mod activity;
+pub mod chat;
+pub mod muted;
 
 use thiserror::Error;
 use tokio::sync::broadcast;

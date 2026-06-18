@@ -8,14 +8,12 @@ use crate::domain::room::{ self, entities, query };
 pub struct Player {
     pub id: Uuid,
     pub is_ready: bool, 
-    pub points: u64, 
 }
 
 #[derive(Debug, Serialize, Clone, StructuralConvert)]
 #[convert(from(query::PlayerBody))]
 pub struct PlayerBodyResponse {
     pub is_ready: bool, 
-    pub points: u64, 
 }
 
 #[derive(Debug, Serialize, Clone, StructuralConvert)]
@@ -49,7 +47,7 @@ impl From<entities::Room> for RoomPublicResponse {
         Self {
             id: value.id.get().to_string(),
             name: value.name.get().to_string(),
-            is_public: *value.is_public.get(),
+            is_public: value.is_public,
             password: value.password.is_some(),
             owner: value.owner,
             max_players: value.max_players.get()

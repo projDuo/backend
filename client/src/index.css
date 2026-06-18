@@ -1,0 +1,117 @@
+
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color-scheme: dark;
+
+  --highlight: #ffcc00;
+  --primary-color: #ffcc00;
+
+  --bg-body: #121212;
+  --bg-app: #121212;
+  --bg-pane-light: rgba(255, 255, 255, 0.1);
+  --bg-pane-heavy: rgba(0, 0, 0, 0.5);
+  --btn-bg: #1a1a1a;
+  --text-main: #ffffff;
+  --text-muted: #aaaaaa;
+  --text-on-accent: #1a1a1a;
+  --border-color: rgba(255, 255, 255, 0.2);
+
+  --game-success: #44ff88;
+  --game-error: #ff6b6b;
+  --game-playable-border: rgba(68, 255, 136, 0.6);
+  --game-playable-bg: rgba(68, 255, 136, 0.08);
+  --game-playable-shadow: rgba(68, 255, 136, 0.2);
+  --game-playable-shadow-hover: rgba(68, 255, 136, 0.4);
+  --game-current-player: rgba(124, 176, 255, 0.8);
+  --game-current-player-dim: rgba(124, 176, 255, 0.25);
+
+  --chat-accent: rgba(124, 176, 255, 0.85);
+
+  color: var(--text-main);
+  background-color: var(--bg-body);
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+a {
+  font-weight: 500;
+  color: var(--primary-color);
+  text-decoration: inherit;
+  transition: opacity 0.2s;
+}
+
+a:hover {
+  opacity: 0.85;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: var(--btn-bg);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: border-color 0.25s, background-color 0.25s;
+}
+
+button:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+button:focus,
+button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 2px;
+}
+
+
+.btn-primary {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: var(--text-on-accent);
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.06);
+  border-color: var(--primary-color);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}

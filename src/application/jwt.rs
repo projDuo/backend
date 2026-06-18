@@ -1,4 +1,4 @@
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{decode, encode, errors::ErrorKind, DecodingKey, EncodingKey, Header, Validation};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -53,8 +53,7 @@ impl TokenProvider for Service {
             .sample_iter(&Alphanumeric)
             .take(64)
             .map(char::from)
-            .collect::<String>()
-            .into();
+            .collect::<String>();
 
         Ok(TokenPair { access_token, refresh_token })
     }
@@ -84,11 +83,32 @@ impl TokenProvider for Service {
             &DecodingKey::from_secret(self.secret.as_bytes()),
             &Validation::default(),
         )
-        .map_err(|_| SessionError::Invalid)?;
+        .map_err(|err| match err.kind() {
+            ErrorKind::ExpiredSignature => SessionError::Expired,
+            _ => SessionError::Invalid,
+        })?;
 
         Ok(TokenData {
             account_id: token_data.claims.sub,
             session_id: token_data.claims.sid,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use secrecy::SecretString;
+
+    #[test]
+    fn generate_and_verify_pair() {
+        let svc = Service::new("test-secret", chrono::Duration::minutes(5), chrono::Duration::minutes(10));
+        let account_id = uuid::Uuid::now_v7();
+        let session_id = uuid::Uuid::now_v7();
+
+        let pair = svc.generate_pair(account_id, session_id).expect("generate_pair");
+        let token_data = svc.verify_token(SecretString::new(pair.access_token.into_boxed_str())).expect("verify");
+        assert_eq!(token_data.account_id, account_id);
+        assert_eq!(token_data.session_id, session_id);
     }
 }

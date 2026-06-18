@@ -1,5 +1,6 @@
 use poem::{ Result, handler, http::StatusCode, web::{ self, Data, Json, Path } };
 use std::sync::Arc;
+use uuid::Uuid;
 use crate::{ 
     AppState, domain::{activity::ActivityService, room::{commands, errors::*, ports::*}},
 };
@@ -13,7 +14,7 @@ pub async fn get_rooms_list(
     #[allow(unused)] //Is actually used for the auth lock
     user: Data<&AuthenticatedUser>,
     query: web::Query<RoomQuery>) -> Result<Json<Vec<RoomListItem>>> { //функція для формування списку
-    let rooms = state.rooms.read_room_list(query.limit, query.after).await?
+    let rooms = state.rooms.read_room_list(query.limit, query.after, query.search.clone()).await?
         .into_iter().map(Into::into).collect();
     Ok(Json(rooms)) //надсилання відповіді
 }
@@ -108,4 +109,14 @@ pub async fn ready( //функція для перемикання готовн�
     let player = state.rooms.update_room_player(player.into()).await?.into();
 
     Ok(Json(player))
+}
+
+#[handler]
+pub async fn kick(
+    Path((id, player_id)): Path<(String, Uuid)>,
+    state: Data<&Arc<AppState>>,
+    user: Data<&AuthenticatedUser>,
+) -> Result<StatusCode> {
+    state.rooms.kick_room_player(user.account_id, id, player_id).await?;
+    Ok(StatusCode::OK)
 }

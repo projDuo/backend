@@ -14,7 +14,7 @@ impl From<Model> for Savefile {
             value.cards_had as u64,
             value.wins as u32,
             value.loses as u32,
-            value.max_points as u16
+            value.max_points as u64,
         )
     }
 }
@@ -84,7 +84,7 @@ impl SavefilesRepository for super::Postgres {
         }
 
         if let Some(v) = cmd.max_points {
-            active_model.set(Column::MaxPoints, (v as i16).into());
+            active_model.set(Column::MaxPoints, (v as i64).into());
         }
 
         let model = Entity::update(active_model).exec(&self.db).await?;

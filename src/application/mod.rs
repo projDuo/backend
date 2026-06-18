@@ -3,21 +3,25 @@ pub mod sessions;
 pub mod auth;
 pub mod jwt;
 pub mod savefiles;
-pub mod roles;
 pub mod room;
 pub mod game;
+pub mod game_history;
 pub mod activity;
+pub mod chat;
+pub mod muted;
 
 pub use accounts::Service as Accounts;
 //pub use sessions::Service as Sessions;
 pub use activity::Service as Activity;
+
 pub use auth::Service as Auth;
 pub use jwt::Service as Jwt;
 pub use savefiles::Service as Savefiles;
-pub use roles::Service as Roles;
+pub use game_history::Service as GameHistory;
 pub use room::Service as Room;
 pub use game::Service as Game;
-
+pub use chat::Chat as Chat;
+pub use muted::Service as Muted;
 use std::sync::{Arc, Weak};
 use tokio::sync::broadcast::{ self, error::RecvError};
 
@@ -54,6 +58,7 @@ where
                                 break; 
                             }
                         }
+
                         Err(RecvError::Lagged(_)) => {
                             continue;
                         }
@@ -62,6 +67,8 @@ where
                             break;
                         }
                     }
+
+                    
                 }
                 
                 _ = shutdown_rx.recv() => {

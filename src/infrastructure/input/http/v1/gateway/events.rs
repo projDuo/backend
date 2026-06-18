@@ -13,10 +13,15 @@ use crate::{
             events::ActivityEvent
         },
         auth::AuthService,
+        chat::{
+            ChatEventBus,
+            events::ChatEvent
+        },
         game::{
             GameEventBus,
             GameEvents
         }, 
+        muted::MutedService,
         room::{
             RoomEvent,
             RoomEventBus
@@ -30,6 +35,7 @@ use crate::{
                 AuthEventOut,
                 output::Authorized
             },
+            chat::ChatEventOut,
             game::GameEventOut,
             room::RoomEventOut,
             activity::ActivityEventOut,
@@ -66,10 +72,15 @@ pub async fn identify( //Функція яка ідентифікує акаун
     let activity_shutdown_tx = Sender::new(1);
     let room_shutdown_tx = Sender::new(1);
     let game_shutdown_tx = Sender::new(1);
+    let chat_shutdown_tx = Sender::new(1);
 
     if let Some(v) = &activity.room {
         if let Some(rx) = state.room_event_bus.subscribe(v.to_string()) {
             listen::<RoomEvent, RoomEventOut>(rx, tx.clone(), room_shutdown_tx.subscribe());
+        };
+        // Subscribe to chat events for this room (using same ID)
+        if let Some(rx) = state.chat_event_bus.subscribe(v.to_string()) {
+            listen_chat(rx, tx.clone(), chat_shutdown_tx.subscribe(), uuid, state.muted.clone());
         };
     };
     if let Some(_v) = &activity.game {
@@ -87,12 +98,18 @@ pub async fn identify( //Функція яка ідентифікує акаун
             match event {
                 ActivityEvent::JoinedRoom { room_id } => {
                     let _ = room_shutdown_tx.send(());
-                    let Some(rx) = state.room_event_bus.subscribe(room_id)
+                    let _ = chat_shutdown_tx.send(());
+                    let Some(rx) = state.room_event_bus.subscribe(room_id.clone())
                         else { return };
                     listen::<RoomEvent, RoomEventOut>(rx, tx.clone(), room_shutdown_tx.subscribe());
+                    // Subscribe to chat for this room
+                    if let Some(rx) = state.chat_event_bus.subscribe(room_id) {
+                        listen_chat(rx, tx.clone(), chat_shutdown_tx.subscribe(), user_id, state.muted.clone());
+                    }
                 },
                 ActivityEvent::LeftRoom => {
                     let _ = room_shutdown_tx.send(());
+                    let _ = chat_shutdown_tx.send(());
                 },
                 ActivityEvent::JoinedGame { game_id } => {
                     tracing::info!("huhuh: {} {}", game_id, user_id);
@@ -180,4 +197,62 @@ where
             break;
         }
     }}});
+}
+
+fn listen_chat(
+    mut rx: Receiver<ChatEvent>,
+    tx: Sender<String>,
+    mut shutdown_rx: Receiver<()>,
+    user_id: Uuid,
+    muted_service: Arc<dyn MutedService + Send + Sync>,
+) {
+    tokio::spawn(async move {
+        loop {
+            tokio::select! {
+                res = rx.recv() => {
+                    match res {
+                        Ok(event) => {
+                            let should_send = match &event {
+                                ChatEvent::MessagePosted(message)
+                                | ChatEvent::MessageEdited(message) => {
+                                    match muted_service.get_muted_users(user_id).await {
+                                        Ok(muted) => !muted.iter().any(|entry| entry.blocked_id == message.author),
+                                        Err(err) => {
+                                            tracing::error!(error = ?err, "Failed to fetch muted users for chat event filtering");
+                                            true
+                                        }
+                                    }
+                                }
+                                ChatEvent::MessageDeleted(_) => true,
+                            };
+
+                            if !should_send {
+                                continue;
+                            }
+
+                            let event_out: ChatEventOut = event.into();
+                            let json = match serde_json::to_string(&event_out) {
+                                Ok(serialized) => serialized,
+                                Err(e) => {
+                                    tracing::error!(error = %e, "Failed to serialize chat event");
+                                    continue;
+                                }
+                            };
+                            if tx.send(json).is_err() {
+                                break;
+                            };
+                        },
+                        Err(RecvError::Lagged(_)) => { continue; }
+                        Err(RecvError::Closed) => {
+                            tracing::debug!("Chat event bus closed. Dropping listener.");
+                            break;
+                        }
+                    }
+                }
+                _ = shutdown_rx.recv() => {
+                    break;
+                }
+            }
+        }
+    });
 }

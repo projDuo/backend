@@ -1,7 +1,5 @@
 use uuid::Uuid;
 
-use crate::domain::sessions::HashedToken;
-
 #[derive(Debug, Clone)]
 pub struct TokenData {
     pub account_id: Uuid,
@@ -19,5 +17,5 @@ impl TokenData {
 
 pub struct TokenPair {
     pub access_token: String,
-    pub refresh_token: HashedToken,
+    pub refresh_token: String,
 }

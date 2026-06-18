@@ -24,6 +24,7 @@ pub trait AccountsService {
     async fn read_account(&self, id: Uuid) -> Result<Account, AccountError>;
     async fn read_account_by_login(&self, login: String) -> Result<Account, AccountError>;
     async fn read_account_by_id_or_login(&self, id: &str) -> Result<Account, AccountError>;
+    async fn update_account(&self, cmd: UpdateAccountRequest) -> Result<Account, AccountError>;
     async fn register(&self, cmd: CreateAccountRequest) -> Result<Account, AccountError>;
     async fn login(&self, login: String, password: SecretString) -> Result<Account, AccountError>;
     async fn is_login_taken(&self, login: String) -> Result<bool, InternalError>;
