@@ -76,6 +76,8 @@ function App() {
   const [accountSettingsError, setAccountSettingsError] = useState(null)
   const [isUpdatingAccount, setIsUpdatingAccount] = useState(false)
   const [isPasswordUnlocked, setIsPasswordUnlocked] = useState(false)
+  const [mutedUsers, setMutedUsers] = useState([])
+  const [isMuting, setIsMuting] = useState(false)
 
   const handlers = useMemo(() => ({
     getToken: () => {
@@ -353,6 +355,43 @@ function App() {
       fetchMatches();
     }
   }, [activeTab, token]);
+
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      const fetchMuted = async () => {
+        try {
+          const list = await api.getMutedUsers(handlers);
+          setMutedUsers((list || []).map(u => String(u.blocked_id)));
+        } catch (e) {
+          console.error("Failed to fetch muted users:", e);
+        }
+      };
+      fetchMuted();
+    } else {
+      setMutedUsers([]);
+    }
+  }, [isAuthenticated, token, handlers]);
+
+  const handleToggleMute = async (userId) => {
+    if (!userId) return;
+    const userIdStr = String(userId);
+    const isMuted = mutedUsers.includes(userIdStr);
+    setIsMuting(true);
+    try {
+      if (isMuted) {
+        await api.unmutePlayer(handlers, userIdStr);
+        setMutedUsers(prev => prev.filter(id => id !== userIdStr));
+      } else {
+        await api.mutePlayer(handlers, userIdStr);
+        setMutedUsers(prev => [...prev, userIdStr]);
+      }
+    } catch (e) {
+      console.error("Failed to toggle mute:", e);
+      alert(`Failed to ${isMuted ? 'unmute' : 'mute'} player: ${e.message}`);
+    } finally {
+      setIsMuting(false);
+    }
+  };
 
   const openSavedGame = async (gameId) => {
     if (!gameId) return;
@@ -660,6 +699,9 @@ function App() {
               error={selectedPlayer.error}
               isOwnProfile={!selectedPlayer.id || String(selectedPlayer.id) === String(myId)}
               onOpenAccountSettings={openAccountSettings}
+              isMuted={selectedPlayer.id ? mutedUsers.includes(String(selectedPlayer.id)) : false}
+              onToggleMute={() => handleToggleMute(selectedPlayer.id)}
+              isMuting={isMuting}
             />
           )}
 

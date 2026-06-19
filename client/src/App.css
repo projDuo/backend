@@ -697,3 +697,13 @@
   border-color: var(--highlight);
   background: rgba(255, 204, 0, 0.1);
 }
+
+.player-header__settings--muted {
+  border-color: var(--game-error, rgba(255, 107, 107, 0.8));
+  background: rgba(255, 107, 107, 0.15);
+}
+
+.player-header__settings--muted:hover {
+  border-color: var(--game-error, rgba(255, 107, 107, 1));
+  background: rgba(255, 107, 107, 0.3);
+}

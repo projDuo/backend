@@ -1,17 +1,36 @@
-export default function StatisticsPanel({ displayName, stats, isLoading, error, isOwnProfile, onOpenAccountSettings }) {
+export default function StatisticsPanel({
+  displayName,
+  stats,
+  isLoading,
+  error,
+  isOwnProfile,
+  onOpenAccountSettings,
+  isMuted,
+  onToggleMute,
+  isMuting,
+}) {
   const statsData = stats || {};
 
   return (
     <div className="panel-nav__body" id="playerStatistics">
       <div className="player-header">
         <h2 id="userStatistics">{displayName ? `${displayName}'s Profile` : 'Player Statistics'}</h2>
-        {isOwnProfile && (
+        {isOwnProfile ? (
           <button
             type="button"
             className="player-header__settings"
             onClick={onOpenAccountSettings}
           >
             Settings
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={`player-header__settings ${isMuted ? 'player-header__settings--muted' : ''}`}
+            onClick={onToggleMute}
+            disabled={isMuting}
+          >
+            {isMuted ? 'Unmute' : 'Mute'}
           </button>
         )}
       </div>

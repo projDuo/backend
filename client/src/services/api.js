@@ -373,8 +373,35 @@ joinRoom: async (tokenHandlers, roomId, password = null) => {
   reportPlayer: async () => {
     throw new Error('Reporting is not implemented.');
   },
-  mutePlayer: async () => {
-    throw new Error('Mute is not implemented.');
+  getMutedUsers: async (tokenHandlers) => {
+    const { access_token } = tokenHandlers.getToken();
+    const options = {
+      method: 'GET',
+      headers: access_token ? authHeaders(access_token) : {},
+    };
+    const res = await request(`/api/v1/muted`, options, tokenHandlers);
+    if (!res.ok) throw new Error(await errorMessageFromResponse(res));
+    return res.json();
+  },
+  mutePlayer: async (tokenHandlers, blockedId) => {
+    const { access_token } = tokenHandlers.getToken();
+    const options = {
+      method: 'POST',
+      headers: authHeaders(access_token),
+    };
+    const res = await request(`/api/v1/muted/${blockedId}`, options, tokenHandlers);
+    if (!res.ok) throw new Error(await errorMessageFromResponse(res));
+    return res;
+  },
+  unmutePlayer: async (tokenHandlers, blockedId) => {
+    const { access_token } = tokenHandlers.getToken();
+    const options = {
+      method: 'DELETE',
+      headers: authHeaders(access_token),
+    };
+    const res = await request(`/api/v1/muted/${blockedId}`, options, tokenHandlers);
+    if (!res.ok) throw new Error(await errorMessageFromResponse(res));
+    return res;
   },
 
   getSavefile: async (id, token) => {
