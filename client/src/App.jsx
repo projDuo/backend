@@ -81,11 +81,13 @@ function App() {
 
   const handlers = useMemo(() => ({
     getToken: () => {
+      const storedAccess = localStorage.getItem('access_token');
       const storedRefresh = localStorage.getItem('refresh_token');
+      const normalizedAccess = storedAccess === 'undefined' || storedAccess === 'null' ? null : storedAccess;
       const normalizedRefresh = storedRefresh === 'undefined' || storedRefresh === 'null' ? null : storedRefresh;
       return {
-        access_token: typeof token === 'object' ? token.access_token : token,
-        refresh_token: refreshToken || normalizedRefresh,
+        access_token: normalizedAccess || (typeof token === 'object' ? token.access_token : token),
+        refresh_token: normalizedRefresh || refreshToken,
       };
     },
     updateTokens: (newPair) => {

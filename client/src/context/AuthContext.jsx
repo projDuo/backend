@@ -101,7 +101,7 @@ export const AuthProvider = ({ children }) => {
     const refreshPromise = (async () => {
       setLoading(true);
       try {
-        const rt = refreshToken || normalizeStoredToken(localStorage.getItem('refresh_token'));
+        const rt = normalizeStoredToken(localStorage.getItem('refresh_token')) || refreshToken;
         console.debug('[AuthContext] refresh start', {
           refreshTokenInState: !!refreshToken,
           refreshTokenInStorage: !!normalizeStoredToken(localStorage.getItem('refresh_token')),

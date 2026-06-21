@@ -344,6 +344,10 @@ export function useGatewaySession({
       console.warn('WS Auth Error: Attempting silent re-identification...')
       try {
         const newPair = await refresh()
+        if (ws.intentionalClose) {
+          console.debug('[App] WS manager was intentionally closed/superseded, skipping re-identification');
+          return;
+        }
         console.debug('[App] WS refresh returned new token pair', {
           accessTokenLength: newPair.access_token?.length,
           refreshTokenLength: newPair.refresh_token?.length,
@@ -362,7 +366,7 @@ export function useGatewaySession({
       } catch (err) {
         console.warn('WS token refresh failed:', err)
         clearSession()
-        if (ws) ws.disconnect()
+        if (ws && !ws.intentionalClose) ws.disconnect()
       }
     }
 
