@@ -10,29 +10,15 @@ export default function HallOfRooms({
   joinedRoomId,
   ws,
   myId,
+  handlers,
 }) {
-  const { token, refreshToken, updateTokens, logout, refresh, clearSession } = useAuth();
+  const { token, refreshToken } = useAuth();
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [passwordRoom, setPasswordRoom] = useState(null);
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState(null);
-
-  const handlers = useMemo(() => ({
-    getToken: () => ({
-      access_token: typeof token === 'object' ? token.access_token : token,
-      refresh_token: refreshToken || localStorage.getItem('refresh_token'),
-    }),
-    updateTokens: (newPair) => {
-      localStorage.setItem('access_token', newPair.access_token);
-      localStorage.setItem('refresh_token', newPair.refresh_token);
-      if (updateTokens) updateTokens(newPair);
-    },
-    refresh,
-    clearSession,
-    logout,
-  }), [token, refreshToken, updateTokens, refresh, clearSession, logout]);
 
   const [createForm, setCreateForm] = useState({
     name: 'Duo Room',

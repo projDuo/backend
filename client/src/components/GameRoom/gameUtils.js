@@ -51,6 +51,14 @@ export function mergeGamePayload(prev, incoming) {
     if (incomingHistory) return incomingHistory;
     if (!preservedHistory || !incoming.card) return preservedHistory;
 
+    if (
+      prev &&
+      incoming.turn_enforced_at != null &&
+      prev.turn_enforced_at === incoming.turn_enforced_at
+    ) {
+      return preservedHistory;
+    }
+
     const rawPreviousPlayer = Array.isArray(prev.players)
       ? prev.players[prev.turn]
       : undefined;

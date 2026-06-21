@@ -123,6 +123,66 @@ function App() {
     return cached ? playerDisplayName(cached) || String(id).slice(0, 8) : null
   }, [])
 
+  const resolvePlayerNames = useCallback(async (ids, tokenString) => {
+    if (!ids) return;
+    const idsArray = typeof ids[Symbol.iterator] === 'function' ? [...ids] : Array.from(ids);
+    if (idsArray.length === 0) return;
+
+    const idsToFetch = [];
+    const cachedNames = {};
+
+    for (const id of idsArray) {
+      const key = String(id);
+      const cachedName = getCachedPlayerName(id);
+      if (cachedName) {
+        cachedNames[key] = cachedName;
+      } else {
+        idsToFetch.push(id);
+      }
+    }
+
+    const fetchedNames = {};
+    if (idsToFetch.length > 0) {
+      const results = await Promise.allSettled(
+        idsToFetch.map(async (id) => {
+          const account = await api.getAccount(id, tokenString);
+          cacheProfiles(account);
+          return { id, name: playerDisplayName(account) || String(id).slice(0, 8) };
+        })
+      );
+
+      results.forEach((res, index) => {
+        const id = idsToFetch[index];
+        if (res.status === 'fulfilled') {
+          fetchedNames[String(res.value.id)] = res.value.name;
+        } else {
+          fetchedNames[String(id)] = String(id).slice(0, 8);
+        }
+      });
+    }
+
+    setPlayerNames((prev) => {
+      const next = { ...prev };
+      let updated = false;
+
+      for (const [id, name] of Object.entries(cachedNames)) {
+        if (next[id] !== name) {
+          next[id] = name;
+          updated = true;
+        }
+      }
+
+      for (const [id, name] of Object.entries(fetchedNames)) {
+        if (next[id] !== name) {
+          next[id] = name;
+          updated = true;
+        }
+      }
+
+      return updated ? next : prev;
+    });
+  }, [getCachedPlayerName, cacheProfiles]);
+
   const normalizeRoomPayload = useCallback((room) => {
     if (!room) return room
     if (room.room && Array.isArray(room.players)) {
@@ -232,37 +292,7 @@ function App() {
 
     const fetchPlayerNames = async () => {
       const tokenString = typeof token === 'object' ? token.access_token : token;
-      const fetched = {};
-      const idsToFetch = [];
-
-      for (const id of idsToResolve) {
-        const cachedName = getCachedPlayerName(id);
-        if (cachedName) {
-          fetched[id] = cachedName;
-        } else {
-          idsToFetch.push(id);
-        }
-      }
-
-      if (idsToFetch.length > 0) {
-        const results = await Promise.allSettled(
-          idsToFetch.map(async (id) => {
-            const account = await api.getAccount(id, tokenString);
-            cacheProfiles(account);
-            return { id, name: playerDisplayName(account) || String(id).slice(0, 8) };
-          })
-        );
-
-        for (let index = 0; index < results.length; index += 1) {
-          const result = results[index];
-          const id = idsToFetch[index];
-          if (result.status === 'fulfilled') {
-            fetched[result.value.id] = result.value.name;
-          } else {
-            fetched[id] = String(id).slice(0, 8);
-          }
-        }
-      }
+      await resolvePlayerNames(idsToResolve, tokenString);
 
       setPlayerNames((prev) => {
         const next = { ...prev };
@@ -277,18 +307,11 @@ function App() {
           }
         }
 
-        for (const [id, name] of Object.entries(fetched)) {
-          if (!next[id] || next[id] !== name) {
-            next[id] = name;
-            updated = true;
-          }
-        }
-
         return updated ? next : prev;
       });
     };
     fetchPlayerNames();
-  }, [joinedRoom, gameState?.players, token]);
+  }, [joinedRoom, gameState?.players, token, resolvePlayerNames]);
 
   useEffect(() => {
     if (activeTab === 'rankings' && token) {
@@ -298,45 +321,8 @@ function App() {
           const data = await api.getRankings(tokenString);
           setRankings(data);
 
-          const next = { ...playerNames };
-          let updated = false;
-          const idsToFetch = [];
-
-          for (const rank of data) {
-            const key = String(rank.id);
-            if (!next[key]) {
-              const cachedName = getCachedPlayerName(rank.id);
-              if (cachedName) {
-                next[key] = cachedName;
-                updated = true;
-              } else {
-                idsToFetch.push(rank.id);
-              }
-            }
-          }
-
-          if (idsToFetch.length > 0) {
-            const results = await Promise.allSettled(
-              idsToFetch.map(async (id) => {
-                const account = await api.getAccount(id, tokenString);
-                cacheProfiles(account);
-                return { id, name: playerDisplayName(account) || String(id).slice(0, 8) };
-              })
-            );
-
-            for (let index = 0; index < results.length; index += 1) {
-              const result = results[index];
-              const id = idsToFetch[index];
-              if (result.status === 'fulfilled') {
-                next[String(result.value.id)] = result.value.name;
-              } else {
-                next[String(id)] = String(id).slice(0, 8);
-              }
-              updated = true;
-            }
-          }
-
-          if (updated) setPlayerNames(next);
+          const ids = data.map(rank => rank.id);
+          await resolvePlayerNames(ids, tokenString);
         } catch (e) {
           console.error("Failed to fetch rankings:", e);
         }
@@ -346,8 +332,19 @@ function App() {
     if (activeTab === 'matches' && token && !joinedRoom?.game) {
       const fetchMatches = async () => {
         try {
+          const tokenString = typeof token === 'object' ? token.access_token : token;
           const data = await api.getGamesHistory(handlers, null, 100);
-          setMatchesList(Array.isArray(data) ? data : []);
+          const list = Array.isArray(data) ? data : [];
+          setMatchesList(list);
+
+          const participantIds = new Set();
+          list.forEach((m) => {
+            if (Array.isArray(m.participants)) {
+              m.participants.forEach((p) => participantIds.add(String(p)));
+            }
+          });
+
+          await resolvePlayerNames(participantIds, tokenString);
         } catch (e) {
           console.error('Failed to fetch matches list:', e);
           setMatchesList([]);
@@ -355,7 +352,7 @@ function App() {
       };
       fetchMatches();
     }
-  }, [activeTab, token]);
+  }, [activeTab, token, resolvePlayerNames]);
 
   useEffect(() => {
     if (isAuthenticated && token) {
