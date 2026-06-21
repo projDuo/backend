@@ -26,15 +26,17 @@ export default function RoomLobby({
         >
           ✕
         </button>
-        <button
-          type="button"
-          id="settingsRoom"
-          className="room-header__settings"
-          title="Room settings"
-          onClick={onOpenRoomSettings}
-        >
-          Settings
-        </button>
+        {room.owner === myId && (
+          <button
+            type="button"
+            id="settingsRoom"
+            className="room-header__settings"
+            title="Room settings"
+            onClick={onOpenRoomSettings}
+          >
+            Settings
+          </button>
+        )}
         <h2 id="roomName">{room.name}</h2>
         <p id="idRoom">ID: {room.id}</p>
       </div>
