@@ -13,6 +13,10 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(normalizeStoredToken(localStorage.getItem('access_token')));
   const [refreshToken, setRefreshToken] = useState(normalizeStoredToken(localStorage.getItem('refresh_token')));
   const refreshInFlightRef = useRef(null);
+  const tokensRef = useRef({
+    access_token: normalizeStoredToken(localStorage.getItem('access_token')),
+    refresh_token: normalizeStoredToken(localStorage.getItem('refresh_token')),
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -35,6 +39,11 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('refresh_token');
       setRefreshToken(null);
     }
+
+    tokensRef.current = {
+      access_token: pair.access_token,
+      refresh_token: nextRefreshToken || (pair.refresh_token === undefined ? tokensRef.current.refresh_token : null),
+    };
   }, []);
 
   const register = async (loginName, password) => {
@@ -81,6 +90,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('refresh_token');
       setToken(null);
       setRefreshToken(null);
+      tokensRef.current = { access_token: null, refresh_token: null };
       setLoading(false);
     }
   };
@@ -90,6 +100,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('refresh_token');
     setToken(null);
     setRefreshToken(null);
+    tokensRef.current = { access_token: null, refresh_token: null };
   }, []);
 
   const refresh = useCallback(async () => {
@@ -101,7 +112,7 @@ export const AuthProvider = ({ children }) => {
     const refreshPromise = (async () => {
       setLoading(true);
       try {
-        const rt = normalizeStoredToken(localStorage.getItem('refresh_token')) || refreshToken;
+        const rt = tokensRef.current.refresh_token || refreshToken || normalizeStoredToken(localStorage.getItem('refresh_token'));
         console.debug('[AuthContext] refresh start', {
           refreshTokenInState: !!refreshToken,
           refreshTokenInStorage: !!normalizeStoredToken(localStorage.getItem('refresh_token')),
@@ -133,6 +144,8 @@ export const AuthProvider = ({ children }) => {
     }
   }, [refreshToken, updateTokens]);
 
+  const getTokens = useCallback(() => tokensRef.current, []);
+
   const value = useMemo(() => ({
     token,      
     refreshToken, 
@@ -141,12 +154,13 @@ export const AuthProvider = ({ children }) => {
     error,
     clearSession,
     refresh,
+    getTokens,
     clearError: () => setError(null),
     register,
     login,
     logout,
     isAuthenticated: !!token,
-  }), [token, refreshToken, loading, error]);
+  }), [token, refreshToken, loading, error, getTokens]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

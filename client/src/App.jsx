@@ -23,7 +23,7 @@ import AccountSettingsModal from './components/Modals/AccountSettingsModal'
 import './App.css'
 
 function App() {
-  const { isAuthenticated, logout, token, refreshToken, updateTokens, clearSession, refresh } = useAuth()
+  const { isAuthenticated, logout, token, refreshToken, updateTokens, clearSession, refresh, getTokens } = useAuth()
   const [joinedRoom, setJoinedRoom] = useState(null)
   const [myProfile, setMyProfile] = useState(null)
   const [myStats, setMyStats] = useState(null) 
@@ -81,13 +81,12 @@ function App() {
 
   const handlers = useMemo(() => ({
     getToken: () => {
-      const storedAccess = localStorage.getItem('access_token');
-      const storedRefresh = localStorage.getItem('refresh_token');
-      const normalizedAccess = storedAccess === 'undefined' || storedAccess === 'null' ? null : storedAccess;
-      const normalizedRefresh = storedRefresh === 'undefined' || storedRefresh === 'null' ? null : storedRefresh;
+      if (getTokens) {
+        return getTokens();
+      }
       return {
-        access_token: normalizedAccess || (typeof token === 'object' ? token.access_token : token),
-        refresh_token: normalizedRefresh || refreshToken,
+        access_token: typeof token === 'object' ? token.access_token : token,
+        refresh_token: refreshToken,
       };
     },
     updateTokens: (newPair) => {
@@ -96,7 +95,7 @@ function App() {
     logout,
     clearSession,
     refresh,
-  }), [token, refreshToken, updateTokens, logout, clearSession, refresh])
+  }), [token, refreshToken, updateTokens, logout, clearSession, refresh, getTokens])
 
   const myId = useMemo(() => {
     if (!token) return null;
