@@ -71,6 +71,7 @@ impl SessionsRepository for super::Postgres {
 
     async fn insert_session(&self, cmd: CreateSessionRequest) -> Result<Session, SessionError> {
         let active_model = ActiveModel {
+            id: Set(cmd.id),
             account_id: Set(cmd.account_id),
             token: Set(cmd.token),
             expires_at: Set(cmd.expires_at),
